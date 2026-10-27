@@ -2,7 +2,6 @@ node_modules
 dist
 public/models/*.onnx
 public/engine/
-public/ort/
 .wrangler
 .env*
 .superpowers/

@@ -12,7 +12,6 @@ export class MaiaBot implements Bot {
 
   static async load(model: string | Uint8Array): Promise<MaiaBot> {
     ort.env.wasm.numThreads = 1; // no cross-origin isolation on a plain static host / iOS home-screen app
-    if (typeof window !== 'undefined') ort.env.wasm.wasmPaths = `${import.meta.env.BASE_URL}ort/`;
     const opts: ort.InferenceSession.SessionOptions = { graphOptimizationLevel: 'basic', executionProviders: ['wasm'] };
     const session = typeof model === 'string' ? await ort.InferenceSession.create(model, opts) : await ort.InferenceSession.create(model, opts);
     return new MaiaBot(session);
