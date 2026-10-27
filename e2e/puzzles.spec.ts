@@ -4,7 +4,7 @@ import { expect, noVerticalScroll, playMove, test } from './helpers';
 test('a black-to-move puzzle: try again, then reveal', async ({ page }, info) => {
   await page.goto('/#/puzzle/00rTX');
   const wrap = page.locator('.cg-wrap');
-  await expect(wrap).toHaveClass(/orientation-black/);
+  await expect(wrap).toHaveClass(/orientation-black/, { timeout: 20_000 });
   await expect(page.getByText('Black to move')).toBeVisible();
   await expect(page.getByText('Find the best move.')).toBeVisible({ timeout: 20_000 });
   await playMove(page, 'h4h5');

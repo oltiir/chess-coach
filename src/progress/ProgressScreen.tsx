@@ -56,7 +56,7 @@ export function ProgressScreen() {
                 </span>
               )}
             </div>
-            <p class="dim">Last 10 rapid games · goal: under 1</p>
+            <p class="dim">Last {h.n === 1 ? 'rapid game' : `${h.n} rapid games`} · goal: under 1</p>
             <LineChart label="Pieces hung per game, weekly average" points={weekPoints(h.weekly, one)} format={one} />
           </>
         )}
@@ -81,10 +81,10 @@ export function ProgressScreen() {
           <div class="big-number small">{m.rapidRating.at(-1)!.rating}</div>
           <LineChart
             label="Rapid rating over time"
-            points={m.rapidRating.map((r) => ({ x: r.t, y: r.rating, tip: `${new Date(r.t).toLocaleDateString('en-GB')}: ${r.rating}` }))}
+            points={m.rapidRating.map((r, i) => ({ x: i, y: r.rating, tip: `${new Date(r.t).toLocaleDateString('en-GB')}: ${r.rating}` }))}
             format={(v) => String(Math.round(v))}
           />
-          <p class="dim">Judge it over 4–6 weeks, not day to day.</p>
+          <p class="dim">Your last {m.rapidRating.length} rapid games. Judge it over 4–6 weeks, not day to day.</p>
         </section>
       )}
 

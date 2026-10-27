@@ -3,7 +3,7 @@ import type { Attempt, GameAnalysis, GameRecord } from '../store/types';
 import { isStandard } from '../import/chesscom';
 
 export interface WeekPoint { week: string; avg: number; n: number }
-export interface Rate { rolling: number | null; prev: number | null; weekly: WeekPoint[] }
+export interface Rate { rolling: number | null; prev: number | null; weekly: WeekPoint[]; n: number }
 
 export interface ProgressData {
   hangsPerGame: Rate; freeMissedPerGame: Rate; pawnHangsPerGame: Rate;
@@ -26,7 +26,7 @@ function weekly(points: { t: number; v: number }[]): WeekPoint[] {
 
 function rate(points: { t: number; v: number }[]): Rate {
   const vs = points.map((p) => p.v);
-  return { rolling: mean(vs.slice(-10)), prev: mean(vs.slice(-20, -10)), weekly: weekly(points) };
+  return { rolling: mean(vs.slice(-10)), prev: mean(vs.slice(-20, -10)), weekly: weekly(points), n: Math.min(10, vs.length) };
 }
 
 export function metrics(games: GameRecord[], analyses: GameAnalysis[], attempts: Attempt[], now: number): ProgressData {
@@ -59,7 +59,7 @@ export function metrics(games: GameRecord[], analyses: GameAnalysis[], attempts:
     hangsPerGame: rate(series((s) => s.hangs)),
     freeMissedPerGame: rate(series((s) => s.freeMissed)),
     pawnHangsPerGame: rate(series((s) => s.pawnHangs)),
-    rapidRating: rapid.map((g) => ({ t: g.endTime, rating: g.myRating })),
+    rapidRating: rapid.slice(-50).map((g) => ({ t: g.endTime, rating: g.myRating })),
     themeAccuracy,
     repeatSolveMs,
     clockUsed: weekly(done.filter(({ s }) => s.clockUsedPct !== null).map(({ g, s }) => ({ t: g.endTime, v: s.clockUsedPct! }))),

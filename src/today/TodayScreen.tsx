@@ -144,6 +144,7 @@ function ChessComCard() {
     <a class="card link-card" href="https://www.chess.com/play/online" target="_blank" rel="noopener">
       <strong>Before you play on chess.com</strong>
       <span class="dim">Play 15|10 rapid. Run the three questions before every move.</span>
+      <span class="link-more">Open chess.com →</span>
     </a>
   );
 }

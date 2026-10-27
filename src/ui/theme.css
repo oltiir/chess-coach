@@ -98,7 +98,8 @@ p { margin: 0 0 12px; }
   }
   .nav a[aria-current="page"] { background: var(--accent-soft); }
   h1 { font-size: 28px; }
-  .main { margin-left: var(--side-w); padding: 40px 48px; max-width: 680px; box-sizing: content-box; }
+  /* centred in the space right of the side nav */
+  .main { margin-left: calc(var(--side-w) + max(0px, (100vw - var(--side-w) - 776px) / 2)); padding: 40px 48px; max-width: 680px; box-sizing: content-box; }
 }
 
 .btn {
@@ -248,3 +249,7 @@ label.btn { cursor: pointer; }
 }
 .moment small { font-weight: 400; color: var(--text-dim); font-size: 12px; }
 .moment.on { border-color: var(--accent); background: var(--accent-soft); }
+
+.link-more { color: var(--accent); font-weight: 600; font-size: 14px; margin-top: 6px; }
+.review-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.review-nav .pos { font-variant-numeric: tabular-nums; color: var(--text-dim); font-size: 14px; }

@@ -29,6 +29,7 @@ describe('metrics', () => {
     const m = metrics(games, analyses, [], NOW);
     expect(m.hangsPerGame.rolling).toBe(1);
     expect(m.hangsPerGame.prev).toBe(2);
+    expect(m.hangsPerGame.n).toBe(10);
   });
 
   it('builds weekly points only for weeks with games', () => {
@@ -73,5 +74,18 @@ describe('odds games', () => {
     const normal = game(MON + DAY);
     const m = metrics([odds, normal], [analysis(odds.url, 9), analysis(normal.url, 1)], [], NOW);
     expect(m.hangsPerGame.rolling).toBe(1);
+  });
+});
+
+describe('rating series', () => {
+  it('keeps only the last 50 rapid games', () => {
+    const games = Array.from({ length: 70 }, (_, i) => game(i + 1, 'rapid', 500 + i));
+    const m = metrics(games, [], [], NOW);
+    expect(m.rapidRating).toHaveLength(50);
+    expect(m.rapidRating[0].rating).toBe(520);
+  });
+  it('reports how many games the rolling average uses', () => {
+    const games = [game(1), game(2), game(3)];
+    expect(metrics(games, games.map((g) => analysis(g.url, 1)), [], NOW).hangsPerGame.n).toBe(3);
   });
 });

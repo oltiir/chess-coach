@@ -180,7 +180,7 @@ function Game({ game, onChange }: { game: BotGame; onChange: (g: BotGame | null)
     <div class="solver">
       <div class="solver-head">
         <span class={`turn-dot ${c.turn() === 'w' ? 'white' : 'black'}`} aria-hidden="true" />
-        <span>{over ? 'Game over' : checking ? 'Checking your move…' : myTurn ? 'Your move' : botError ? 'Maia couldn’t move.' : 'Maia is thinking…'}</span>
+        <span>{over ? 'Game over' : pending?.alarm ? 'Check your move' : checking ? 'Checking your move…' : myTurn ? 'Your move' : botError ? 'Maia couldn’t move.' : 'Maia is thinking…'}</span>
         <span class="aside">
           {game.clock && <span class={`clock ${left < 60 ? 'low' : ''}`}>{Math.floor(left / 60)}:{String(left % 60).padStart(2, '0')}</span>}
           <span class="pill">Maia {game.elo}</span>
@@ -269,10 +269,22 @@ function Review({ game, onNew }: { game: BotGame; onNew: () => void }) {
     })();
   }, [game.id, attempt]);
 
-  const d = drills[sel];
+  // What the board shows: a key moment (with arrows) or any position in the game (0 = start).
+  const [ply, setPly] = useState<number | null>(null);
+  const total = game.moves.length;
+  const d = ply === null ? drills[sel] : undefined;
+  const shown = (() => {
+    if (d) return { fen: d.fen, last: undefined as [string, string] | undefined };
+    const n = ply ?? total;
+    const c = new Chess(game.startFen);
+    for (const m of game.moves.slice(0, n)) c.move({ from: m.slice(0, 2), to: m.slice(2, 4), promotion: m[4] });
+    const lm = game.moves[n - 1];
+    return { fen: c.fen(), last: lm ? ([lm.slice(0, 2), lm.slice(2, 4)] as [string, string]) : undefined };
+  })();
+  const at = ply ?? (d ? Number(d.id.split('#')[1]) : total);
+  const go = (n: number) => setPly(Math.max(0, Math.min(total, n)));
   const moveNo = (fen: string) => fen.split(' ')[5];
   const orientation = game.color === 'w' ? 'white' : 'black';
-  const last = game.moves[game.moves.length - 1];
   return (
     <div class="solver review">
       <div class="solver-head">
@@ -280,13 +292,18 @@ function Review({ game, onNew }: { game: BotGame; onNew: () => void }) {
         <span class="aside"><button class="btn secondary small" onClick={onNew}>New game</button></span>
       </div>
       <Board
-        fen={d ? d.fen : final.fen()}
+        fen={shown.fen}
         orientation={orientation}
         movable={false}
-        lastMove={d ? undefined : last ? [last.slice(0, 2), last.slice(2, 4)] : undefined}
+        lastMove={shown.last}
         arrows={d ? [{ from: d.played.slice(0, 2), to: d.played.slice(2, 4), color: 'red' }, { from: d.best.slice(0, 2), to: d.best.slice(2, 4), color: 'green' }] : undefined}
       />
       <div class="solver-foot">
+        <div class="review-nav">
+          <button class="btn secondary small" aria-label="Previous move" disabled={at <= 0} onClick={() => go(at - 1)}>‹</button>
+          <span class="pos">{d ? `Before move ${moveNo(d.fen)}` : at === 0 ? 'Start position' : `Move ${at} of ${total}`}</span>
+          <button class="btn secondary small" aria-label="Next move" disabled={!d && at >= total} onClick={() => go(d ? at : at + 1)}>›</button>
+        </div>
         {!analysis && !failed && <p class="dim">Reviewing your game…</p>}
         {failed && (
           <div class="row between">
@@ -308,7 +325,7 @@ function Review({ game, onNew }: { game: BotGame; onNew: () => void }) {
         {drills.length > 1 && (
           <div class="moments" role="group" aria-label="Key moments">
             {drills.map((x, i) => (
-              <button key={x.id} class={`moment ${i === sel ? 'on' : ''}`} aria-pressed={i === sel} onClick={() => setSel(i)}>
+              <button key={x.id} class={`moment ${ply === null && i === sel ? 'on' : ''}`} aria-pressed={ply === null && i === sel} onClick={() => { setSel(i); setPly(null); }}>
                 Move {moveNo(x.fen)}: {uciToSan(x.fen, x.played)}
                 <small>{LABELS[x.label]}</small>
               </button>
@@ -316,7 +333,7 @@ function Review({ game, onNew }: { game: BotGame; onNew: () => void }) {
           </div>
         )}
         {drills.length === 1 && (
-          <button class="moment on" aria-pressed="true" onClick={() => setSel(0)}>
+          <button class={`moment ${ply === null ? 'on' : ''}`} aria-pressed={ply === null} onClick={() => { setSel(0); setPly(null); }}>
             Move {moveNo(drills[0].fen)}: {uciToSan(drills[0].fen, drills[0].played)}
             <small>{LABELS[drills[0].label]}</small>
           </button>
