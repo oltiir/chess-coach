@@ -1,0 +1,11 @@
+node_modules
+dist
+public/models/*.onnx
+public/engine/
+public/ort/
+.wrangler
+.env*
+.superpowers/
+test-results/
+playwright-report/
+docs/design-review/*.png

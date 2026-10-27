@@ -1,0 +1,118 @@
+:root {
+  --bg: #f6f5f1;
+  --surface: #ffffff;
+  --surface-2: #efeee9;
+  --text: #1d1f1e;
+  --text-dim: #5d625f;
+  --line: #e2e0d9;
+  --accent: #2f7d5b;
+  --accent-ink: #ffffff;
+  --accent-soft: #dcefe5;
+  --good: #2f7d5b;
+  --bad: #c2483d;
+  --bad-soft: #f8e1de;
+  --warn: #b7791f;
+  --radius: 14px;
+  --nav-h: 64px;
+  --side-w: 220px;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #131615;
+    --surface: #1b1f1d;
+    --surface-2: #232826;
+    --text: #e6e8e6;
+    --text-dim: #9aa29e;
+    --line: #2c322f;
+    --accent: #5fb98e;
+    --accent-ink: #0d1a14;
+    --accent-soft: #1f3a2d;
+    --good: #5fb98e;
+    --bad: #e57a6e;
+    --bad-soft: #3a2220;
+    --warn: #e0a84a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #131615; --surface: #1b1f1d; --surface-2: #232826; --text: #e6e8e6; --text-dim: #9aa29e;
+  --line: #2c322f; --accent: #5fb98e; --accent-ink: #0d1a14; --accent-soft: #1f3a2d;
+  --good: #5fb98e; --bad: #e57a6e; --bad-soft: #3a2220; --warn: #e0a84a; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.45 var(--font);
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+a { color: var(--accent); }
+h1 { font-size: 28px; line-height: 1.15; margin: 0 0 4px; letter-spacing: -0.01em; }
+h2 { font-size: 18px; margin: 0 0 8px; }
+p { margin: 0 0 12px; }
+.dim { color: var(--text-dim); }
+
+.layout { min-height: 100%; }
+.main {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: calc(20px + env(safe-area-inset-top)) 16px calc(var(--nav-h) + 24px + env(safe-area-inset-bottom));
+}
+
+.nav {
+  position: fixed; left: 0; right: 0; bottom: 0;
+  display: flex; justify-content: space-around;
+  height: calc(var(--nav-h) + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--line);
+  z-index: 10;
+}
+.nav a {
+  flex: 1; min-width: 44px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  color: var(--text-dim); text-decoration: none; font-size: 11px; font-weight: 500;
+}
+.nav a svg { width: 24px; height: 24px; }
+.nav a[aria-current="page"] { color: var(--accent); }
+.nav .brand { display: none; }
+
+@media (min-width: 900px) {
+  .nav {
+    top: 0; right: auto; width: var(--side-w); height: 100%;
+    flex-direction: column; justify-content: flex-start; gap: 4px;
+    padding: 24px 12px; border-top: 0; border-right: 1px solid var(--line);
+  }
+  .nav .brand { display: block; font-weight: 700; font-size: 18px; padding: 0 12px 20px; color: var(--text); }
+  .nav a {
+    flex: none; flex-direction: row; justify-content: flex-start; gap: 12px;
+    height: 44px; padding: 0 12px; border-radius: 10px; font-size: 15px;
+  }
+  .nav a[aria-current="page"] { background: var(--accent-soft); }
+  .main { margin-left: var(--side-w); padding: 40px 48px; max-width: calc(var(--side-w) + 820px); }
+}
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 48px; padding: 0 20px; border-radius: 12px; border: 0;
+  font: 600 16px var(--font); cursor: pointer;
+  background: var(--accent); color: var(--accent-ink);
+}
+.btn.secondary { background: var(--surface-2); color: var(--text); }
+.btn.ghost { background: transparent; color: var(--accent); }
+.btn.block { width: 100%; }
+.btn:disabled { opacity: 0.5; cursor: default; }
+
+.card {
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 16px; margin-bottom: 12px;
+}
+.stack > * + * { margin-top: 12px; }
+.row { display: flex; gap: 8px; align-items: center; }
+.pill { display: inline-block; padding: 2px 10px; border-radius: 99px; background: var(--surface-2); font-size: 13px; }
