@@ -5,6 +5,7 @@ import { TodayScreen } from './today/TodayScreen';
 import { SyncBanner } from './ui/SyncBanner';
 import { PlayScreen } from './bot/PlayScreen';
 import { ProgressScreen } from './progress/ProgressScreen';
+import { SettingsScreen } from './settings/SettingsScreen';
 
 export type Route = 'today' | 'puzzles' | 'play' | 'progress' | 'settings';
 const routes: Route[] = ['today', 'puzzles', 'play', 'progress', 'settings'];
@@ -36,6 +37,7 @@ export function App() {
         {route === 'today' && <TodayScreen drillId={param} />}
         {route === 'puzzles' && <PuzzleScreen puzzleId={param} />}
         {route === 'progress' && <ProgressScreen />}
+        {route === 'settings' && <SettingsScreen />}
         {route === 'play' && <PlayScreen startFen={param ? decodeURIComponent(param) : undefined} />}
       </main>
     </div>
