@@ -156,3 +156,9 @@ p { margin: 0 0 12px; }
 .session-bar .counter { margin: 0; }
 .progress-track { height: 4px; border-radius: 4px; background: var(--surface-2); margin-bottom: 12px; overflow: hidden; }
 .progress-track span { display: block; height: 100%; background: var(--accent); transition: width 0.3s; }
+
+.banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px;
+  padding: 4px 4px 4px 14px; margin-bottom: 16px; font-size: 14px;
+}

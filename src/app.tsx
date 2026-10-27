@@ -2,6 +2,7 @@ import { useEffect, useState } from 'preact/hooks';
 import { TabBar } from './ui/TabBar';
 import { PuzzleScreen } from './puzzles/PuzzleScreen';
 import { TodayScreen } from './today/TodayScreen';
+import { SyncBanner } from './ui/SyncBanner';
 
 export type Route = 'today' | 'puzzles' | 'play' | 'progress' | 'settings';
 const routes: Route[] = ['today', 'puzzles', 'play', 'progress', 'settings'];
@@ -27,6 +28,7 @@ export function App() {
     <div class="layout">
       <TabBar route={route} />
       <main class="main">
+        <SyncBanner />
         <h1>{titles[route]}</h1>
         {route === 'today' && <TodayScreen />}
         {route === 'puzzles' && <PuzzleScreen puzzleId={param} />}
