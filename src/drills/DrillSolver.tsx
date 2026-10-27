@@ -4,7 +4,7 @@ import { play, uciToSan } from '../chess/rules';
 import { getEngine } from '../engine/client';
 import type { PuzzleResult } from '../puzzles/PuzzleSolver';
 import type { Drill } from '../store/types';
-import { acceptMove, playerColor } from './makeDrills';
+import { acceptWithRetry, playerColor } from './makeDrills';
 
 type Status = 'play' | 'checking' | 'retry' | 'good' | 'revealed';
 
@@ -34,7 +34,11 @@ export function DrillSolver({ drill, onDone, onNext, aside, nextLabel = 'Next' }
     if (!after) return;
     setFen(after.fen());
     setStatus('checking');
-    const ok = await acceptMove(drill, uci, getEngine());
+    let ok: boolean;
+    try { ok = await acceptWithRetry(drill, uci, getEngine()); } catch {
+      setFen(drill.fen); setNonce((n) => n + 1); setStatus(wrong.current ? 'retry' : 'play'); // couldn't check: let them try again
+      return;
+    }
     if (ok) {
       setMine(uci);
       setStatus('good');

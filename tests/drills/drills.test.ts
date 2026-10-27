@@ -54,3 +54,17 @@ describe('acceptMove', () => {
     expect(await acceptMove({ ...d, candidates: d.candidates.slice(0, 1) }, 'b1c3', engine)).toBe(true);
   }, 30_000);
 });
+
+describe('acceptMove after an engine restart', () => {
+  it('retries once when the engine was restarted mid-check', async () => {
+    const { acceptWithRetry } = await import('../../src/drills/makeDrills');
+    let calls = 0;
+    const flaky = { analyse: async () => { if (calls++ === 0) throw new Error('EngineRestarted'); return [{ uci: 'x', pv: [], score: { cp: 0 } }]; } };
+    const d = { ...drill0(), candidates: [{ uci: 'd2d4', wc: 0.05 }] };
+    expect(await acceptWithRetry(d, 'b1c3', flaky as never)).toBe(true);
+    expect(calls).toBe(2);
+  });
+});
+function drill0() {
+  return { id: 'x', fen: 'rnbqkbnr/ppp2ppp/3p4/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3', best: 'd2d4', played: 'f3g5', candidates: [], label: 'hung-piece' as const, explanation: '', source: 'chesscom' as const, createdAt: 1, context: '' };
+}

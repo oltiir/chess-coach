@@ -22,13 +22,21 @@ export async function runQueue(signal: AbortSignal, engine: EngineClient, opts: 
   const total = games.length;
   let done = games.filter((g) => analyses.get(g.url)?.done).length;
   for (const g of games) {
-    let a = analyses.get(g.url) ?? newAnalysis(g, opts.nodes ?? ANALYSIS_NODES);
-    if (a.done && analyses.has(g.url)) continue;
-    while (!a.done) {
-      if (signal.aborted || hidden()) return;
-      a = await analyseNextPly(g, a, engine);
-      await db.put('analyses', a);
-      opts.onPly?.(a, { done, total });
+    if (analyses.get(g.url)?.done) continue;
+    let a: GameAnalysis;
+    try {
+      a = analyses.get(g.url) ?? newAnalysis(g, opts.nodes ?? ANALYSIS_NODES);
+      while (!a.done) {
+        if (signal.aborted || hidden()) return;
+        a = await analyseNextPly(g, a, engine);
+        await db.put('analyses', a);
+        opts.onPly?.(a, { done, total });
+      }
+    } catch (e) {
+      if ((e as Error).message === 'EngineRestarted') throw e;
+      // An unreadable game must not block every older one behind it.
+      a = { url: g.url, engine: 'sf19-lite', nodes: 0, plies: [], done: true, failed: true, nextPly: 0,
+        stats: { ownMoves: 0, hangs: 0, pawnHangs: 0, freeMissed: 0, clockUsedPct: null } };
     }
     await db.put('analyses', a);
     done++;

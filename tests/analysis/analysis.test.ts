@@ -121,3 +121,29 @@ describe('runQueue and odds games', () => {
     expect(await db.get('analyses', 'odds')).toBeUndefined();
   });
 });
+
+describe('review fixes: trades and repeated hangs', () => {
+  it('a trade (Bxc6 dxc6) is not counted or explained as a hung piece', async () => {
+    const a = await run(game('1. e4 e5 2. Nf3 Nc6 3. Bb5 Qg5 4. Bxc6 dxc6'));
+    const p = a.plies.find((x) => x.played === 'b5c6')!;
+    expect(p.hang).toBeNull();
+    expect(p.label).not.toBe('hung-piece');
+    expect(a.stats.hangs).toBe(0);
+  }, 60_000);
+  it('a piece left hanging for two moves counts once', async () => {
+    const a = await run(game('1. e4 e5 2. Nf3 d6 3. Ng5 Nc6 4. a3 Nf6'));
+    expect(a.stats.hangs).toBe(1);
+  }, 60_000);
+});
+
+describe('runQueue robustness', () => {
+  beforeEach(async () => { await closeDb(); globalThis.indexedDB = new IDBFactory(); });
+  it('a game that cannot be read is marked failed and the queue moves on', async () => {
+    const db = await openDb();
+    await db.put('games', game('1. e4 e5', { url: 'broken', endTime: 5, pgn: '[Event "x"]\n\n1. e4 P@e5 2. Nf3' }));
+    await db.put('games', game('1. d4 d5', { url: 'fine', endTime: 1 }));
+    await runQueue(new AbortController().signal, engine, { nodes: NODES });
+    expect((await db.get('analyses', 'broken'))).toMatchObject({ done: true, failed: true });
+    expect((await db.get('analyses', 'fine'))!.done).toBe(true);
+  }, 60_000);
+});

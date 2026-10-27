@@ -91,3 +91,12 @@ describe('syncGames', () => {
     expect(await syncGames('Oltii05', { sleep: noSleep })).toEqual({ added: 0, error: 'server' });
   });
 });
+
+describe('variants', () => {
+  it('keeps the rules so variant games can be skipped', async () => {
+    const { isStandard } = await import('../../src/import/chesscom');
+    const crazy = toGameRecord({ ...month.games[0], rules: 'crazyhouse' } as Parameters<typeof toGameRecord>[0], 'Oltii05');
+    expect(isStandard(crazy)).toBe(false);
+    expect(isStandard(toGameRecord(month.games[0], 'Oltii05'))).toBe(true);
+  });
+});

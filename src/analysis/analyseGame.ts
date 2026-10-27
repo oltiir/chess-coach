@@ -1,5 +1,5 @@
 import { Chess, type Move } from 'chess.js';
-import { bestCapture, findHangs } from '../chess/material';
+import { bestCapture, findHangs, pieceValue } from '../chess/material';
 import { moveToUci, play } from '../chess/rules';
 import { judgeDrop, winningChances, type Score } from '../chess/wc';
 import type { EngineClient } from '../engine/client';
@@ -33,6 +33,13 @@ export function newAnalysis(g: GameRecord, nodes = ANALYSIS_NODES): GameAnalysis
   return a;
 }
 
+/** After a capture, the recapture on the same square is a trade: only the difference counts as hung. */
+export function netHang(mv: { to: string; captured?: string }, h: { square: string; value: number } | null) {
+  if (!h || h.square !== mv.to || !mv.captured) return h;
+  const value = h.value - pieceValue(mv.captured as Parameters<typeof pieceValue>[0]);
+  return value > 0 ? { square: h.square, value } : null;
+}
+
 const flip = (s: Score): Score => (s.mate !== undefined ? { mate: -s.mate } : { cp: -(s.cp ?? 0) });
 
 /** Analyses one of the player's own moves and returns the updated record (nextPly advanced). */
@@ -60,13 +67,16 @@ export async function analyseNextPly(g: GameRecord, a: GameAnalysis, engine: Eng
   const verdict = judgeDrop(wcBest, wcAfter);
   const flag = verdict === 'blunder' || verdict === 'mistake' ? verdict : null;
   const sound = drop <= 0.1; // a sacrifice the engine agrees with is not a hang
-  const h = findHangs(mv.after);
+  const h = netHang(mv, findHangs(mv.after));
+  // A piece that was already hanging after the previous move isn't a new hang.
+  const prev = a.plies[a.plies.length - 1];
+  const repeat = !!h && !!prev?.hang && prev.hang.square === h.square && mv.from !== h.square;
   const free = bestCapture(mv.before);
   const p: PlyAnalysis = {
     ply: a.nextPly, fenBefore: mv.before, played, best: bestLine.uci,
     wcBefore: wcBest, wcAfter, wcBest, drop, flag, label: null,
-    hang: h && h.value >= 3 && !sound ? h : null,
-    pawnHang: !!h && h.value >= 1 && h.value < 3 && !sound,
+    hang: h && h.value >= 3 && !sound && !repeat ? h : null,
+    pawnHang: !!h && h.value >= 1 && h.value < 3 && !sound && !repeat,
     freeMissed: !!free && free.gain >= 3 && mv.to !== free.square && !sound,
     candidates: [],
   };

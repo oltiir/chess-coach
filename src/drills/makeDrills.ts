@@ -43,4 +43,9 @@ export async function acceptMove(d: Drill, uci: string, engine: EngineClient): P
   return best - wc < MISTAKE;
 }
 
+/** iOS can restart the engine mid-check (app switch); try once more before giving up. */
+export async function acceptWithRetry(d: Drill, uci: string, engine: EngineClient): Promise<boolean> {
+  try { return await acceptMove(d, uci, engine); } catch { return acceptMove(d, uci, engine); }
+}
+
 export const playerColor = (fen: string) => (new Chess(fen).turn() === 'w' ? 'white' : 'black');

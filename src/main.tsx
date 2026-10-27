@@ -8,7 +8,7 @@ import './ui/theme.css';
 render(<App />, document.getElementById('app')!);
 onGameAnalysed(async (a) => {
   const g = await (await openDb()).get('games', a.url);
-  if (g) await saveDrills(makeDrills(a, g));
+  if (g && !a.failed) await saveDrills(makeDrills(a, g));
 });
 startBackground();
 void navigator.storage?.persist?.().then((ok) => kvSet('persisted', ok)).catch(() => kvSet('persisted', false));

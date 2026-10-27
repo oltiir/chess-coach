@@ -33,7 +33,7 @@ export function metrics(games: GameRecord[], analyses: GameAnalysis[], attempts:
   const byUrl = new Map(analyses.map((a) => [a.url, a]));
   const rapid = games.filter((g) => g.timeClass === 'rapid').sort((a, b) => a.endTime - b.endTime);
   const analysable = games.filter((g) => (g.timeClass === 'rapid' || g.timeClass === 'daily') && isStandard(g));
-  const done = rapid.filter((g) => isStandard(g) && byUrl.get(g.url)?.done).map((g) => ({ g, s: byUrl.get(g.url)!.stats }));
+  const done = rapid.filter((g) => isStandard(g) && byUrl.get(g.url)?.done && !byUrl.get(g.url)?.failed).map((g) => ({ g, s: byUrl.get(g.url)!.stats }));
   const series = (f: (s: GameAnalysis['stats']) => number) => done.map(({ g, s }) => ({ t: g.endTime, v: f(s) }));
 
   const themeAccuracy: ProgressData['themeAccuracy'] = {};

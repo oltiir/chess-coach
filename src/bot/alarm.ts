@@ -1,5 +1,6 @@
 import { Chess } from 'chess.js';
 import { findHangs } from '../chess/material';
+import { netHang } from '../analysis/analyseGame';
 import { play } from '../chess/rules';
 import { winningChances, type Score } from '../chess/wc';
 import type { EngineClient } from '../engine/client';
@@ -16,7 +17,8 @@ export async function checkMove(fenBefore: string, uci: string, engine: EngineCl
   const wcBest = winningChances(best.score);
   const wcAfter = new Chess(after.fen()).isDraw() ? 0 : winningChances(flip((await engine.analyse(after.fen(), { nodes: ALARM_NODES }))[0]?.score ?? best.score));
   const drop = wcBest - wcAfter;
-  const hang = findHangs(after.fen());
+  const last = after.history({ verbose: true }).at(-1)!;
+  const hang = netHang(last, findHangs(after.fen()));
   if (hang && hang.value >= 3 && drop > 0.1) return { alarm: true, reason: 'hang' };
   if (drop >= 0.3) return { alarm: true, reason: 'drop' };
   return { alarm: false, reason: null };

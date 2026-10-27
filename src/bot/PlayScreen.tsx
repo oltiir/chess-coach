@@ -130,19 +130,24 @@ function Game({ game, onChange }: { game: BotGame; onChange: (g: BotGame | null)
   };
 
   // Bot's move
+  const [botError, setBotError] = useState(false);
+  const [botTry, setBotTry] = useState(0);
   useEffect(() => {
     if (myTurn || game.over) return;
     let live = true;
     const t0 = Date.now();
-    void getBot().then(async (bot) => {
-      const uci = await bot.chooseMove(fen, game.elo, game.playerElo);
-      await new Promise((r) => setTimeout(r, Math.max(0, 500 - (Date.now() - t0))));
-      if (!live) return;
-      const moves = [...gRef.current.moves, uci];
-      onChange({ ...gRef.current, moves, over: overState(replay({ ...gRef.current, moves }), game.color) });
-    });
+    setBotError(false);
+    void getBot()
+      .then(async (bot) => {
+        const uci = await bot.chooseMove(fen, game.elo, game.playerElo);
+        await new Promise((r) => setTimeout(r, Math.max(0, 500 - (Date.now() - t0))));
+        if (!live || gRef.current.over) return; // resigned (or left) while Maia was thinking
+        const moves = [...gRef.current.moves, uci];
+        onChange({ ...gRef.current, moves, over: overState(replay({ ...gRef.current, moves }), game.color) });
+      })
+      .catch(() => { if (live) setBotError(true); });
     return () => { live = false; };
-  }, [game.moves.length]);
+  }, [game.moves.length, botTry]);
 
   // Player's clock
   useEffect(() => {
@@ -175,7 +180,7 @@ function Game({ game, onChange }: { game: BotGame; onChange: (g: BotGame | null)
     <div class="solver">
       <div class="solver-head">
         <span class={`turn-dot ${c.turn() === 'w' ? 'white' : 'black'}`} aria-hidden="true" />
-        <span>{over ? 'Game over' : checking ? 'Checking your move…' : myTurn ? 'Your move' : 'Maia is thinking…'}</span>
+        <span>{over ? 'Game over' : checking ? 'Checking your move…' : myTurn ? 'Your move' : botError ? 'Maia couldn’t move.' : 'Maia is thinking…'}</span>
         <span class="aside">
           {game.clock && <span class={`clock ${left < 60 ? 'low' : ''}`}>{Math.floor(left / 60)}:{String(left % 60).padStart(2, '0')}</span>}
           <span class="pill">Maia {game.elo}</span>
@@ -198,6 +203,11 @@ function Game({ game, onChange }: { game: BotGame; onChange: (g: BotGame | null)
               <button class="btn" style="flex:1" onClick={() => onChange({ ...game, reviewing: true })}>Review game</button>
               <button class="btn secondary" onClick={() => onChange(null)}>New game</button>
             </div>
+          </div>
+        ) : botError ? (
+          <div class="row between">
+            <span class="dim">Something went wrong loading the bot.</span>
+            <button class="btn small" onClick={() => setBotTry((n) => n + 1)}>Try again</button>
           </div>
         ) : pending?.alarm ? (
           <div class="card alarm" role="alertdialog" aria-label="Blunder alarm">
@@ -231,6 +241,7 @@ function Review({ game, onNew }: { game: BotGame; onNew: () => void }) {
   const [sel, setSel] = useState(0);
   const [added, setAdded] = useState<Set<string>>(new Set());
   const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   const final = replay(game);
   useEffect(() => {
     void (async () => {
@@ -256,7 +267,7 @@ function Review({ game, onNew }: { game: BotGame; onNew: () => void }) {
         setFailed(true);
       }
     })();
-  }, [game.id]);
+  }, [game.id, attempt]);
 
   const d = drills[sel];
   const moveNo = (fen: string) => fen.split(' ')[5];
@@ -276,7 +287,13 @@ function Review({ game, onNew }: { game: BotGame; onNew: () => void }) {
         arrows={d ? [{ from: d.played.slice(0, 2), to: d.played.slice(2, 4), color: 'red' }, { from: d.best.slice(0, 2), to: d.best.slice(2, 4), color: 'green' }] : undefined}
       />
       <div class="solver-foot">
-        {!analysis && <p class="dim">{failed ? 'Couldn’t review this game.' : 'Reviewing your game…'}</p>}
+        {!analysis && !failed && <p class="dim">Reviewing your game…</p>}
+        {failed && (
+          <div class="row between">
+            <span class="dim">Couldn’t review this game.</span>
+            <button class="btn secondary small" onClick={() => { setFailed(false); setAttempt((n) => n + 1); }}>Try again</button>
+          </div>
+        )}
         {analysis && !drills.length && <p>No big mistakes found{analysis.stats.hangs === 0 ? ' and no hung pieces' : ''}. Nice and careful.</p>}
         {d && (
           <div class="moment-detail">

@@ -11,7 +11,7 @@ export interface Puzzle { id: string; fen: string; moves: string[]; rating: numb
 export interface GameRecord {
   url: string; endTime: number; timeClass: 'rapid' | 'daily' | 'blitz' | 'bullet' | 'bot';
   timeControl: string; myColor: 'w' | 'b'; myRating: number; oppRating: number;
-  oppName: string; result: 'win' | 'loss' | 'draw'; pgn: string;
+  oppName: string; result: 'win' | 'loss' | 'draw'; pgn: string; rules?: string;
 }
 
 export type MistakeLabel =
@@ -36,6 +36,7 @@ export interface GameStats {
 export interface GameAnalysis {
   url: string; engine: 'sf19-lite'; nodes: number;
   plies: PlyAnalysis[]; stats: GameStats; done: boolean; nextPly: number;
+  failed?: boolean; // the game couldn't be read (e.g. a variant); skipped and left out of stats
 }
 
 export interface Drill {
