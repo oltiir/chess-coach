@@ -230,6 +230,6 @@ p { margin: 0 0 12px; }
 .input:focus { outline: 2px solid var(--accent); outline-offset: 0; }
 label.btn { cursor: pointer; }
 
-.alarm { margin: 0; border-color: var(--warn); }
-.alarm h2 { font-size: 17px; }
-.alarm p { margin-bottom: 12px; }
+.alarm { margin: 0; padding: 12px 14px; border-color: var(--warn); }
+.alarm h2 { font-size: 16px; margin-bottom: 4px; }
+.alarm p { margin-bottom: 10px; font-size: 14px; }
