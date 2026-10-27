@@ -18,7 +18,7 @@ beforeEach(async () => {
 
 describe('toGameRecord', () => {
   it('maps colour, ratings, opponent and result', () => {
-    const r = month.games.map((g: object) => toGameRecord(g, 'Oltii05'));
+    const r = month.games.map((g: Parameters<typeof toGameRecord>[0]) => toGameRecord(g, 'Oltii05'));
     expect(r).toHaveLength(6);
     expect(r[0]).toMatchObject({ url: 'https://www.chess.com/game/live/184717431624', timeClass: 'rapid', myColor: 'b', myRating: 794, oppRating: 672, oppName: 'StainlessSteelFork', result: 'win', endTime: 1790964187000 });
     expect(r[1]).toMatchObject({ myColor: 'w', result: 'loss' });
