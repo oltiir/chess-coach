@@ -6,7 +6,7 @@
   "license": "GPL-3.0-or-later",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/copy-assets.mjs && vite build && node scripts/check-size.mjs",
+    "build": "node scripts/fetch-model.mjs && node scripts/copy-assets.mjs && vite build && node scripts/check-size.mjs",
     "preview": "vite preview --port 4173",
     "test": "vitest run",
     "e2e": "playwright test"
