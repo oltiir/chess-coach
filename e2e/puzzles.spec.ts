@@ -30,4 +30,5 @@ test('puzzles screen shows the ladder and starts a set', async ({ page }) => {
   await page.getByRole('button', { name: 'Start 10 puzzles' }).click();
   await expect(page.locator('.cg-wrap')).toBeVisible();
   await expect(page.getByText('1 / 10')).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth === innerWidth)).toBe(true);
 });

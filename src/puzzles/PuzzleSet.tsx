@@ -18,8 +18,7 @@ export function PuzzleSet({ puzzles, step, onFinish }: Props) {
   const next = () => (i + 1 < puzzles.length ? setI(i + 1) : onFinish(results));
   return (
     <div>
-      <p class="dim counter">{i + 1} / {puzzles.length}</p>
-      <PuzzleSolver puzzle={p} onDone={done} onNext={next} nextLabel={i + 1 < puzzles.length ? 'Next' : 'Finish'} />
+      <PuzzleSolver puzzle={p} onDone={done} onNext={next} nextLabel={i + 1 < puzzles.length ? 'Next' : 'Finish'} aside={<span class="dim counter">{i + 1} / {puzzles.length}</span>} />
     </div>
   );
 }

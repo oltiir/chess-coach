@@ -32,6 +32,7 @@ export function TodayScreen() {
   const remaining = session.items.filter((i) => !session.doneIds.includes(i.id));
   const total = session.items.length;
   const doneCount = total - remaining.length;
+  const drillCount = session.items.filter((i) => i.kind === 'drill').length;
 
   const record = async (id: string, r: PuzzleResult) => {
     const item = session.items.find((i) => i.id === id)!;
@@ -53,17 +54,19 @@ export function TodayScreen() {
   if (mode === 'running' && current) {
     const item = current;
     const position = session.items.indexOf(item) + 1;
+    const aside = (
+      <>
+        <span class="dim counter">{position} / {total}</span>
+        <button class="btn ghost small" onClick={() => setMode('home')}>Pause</button>
+      </>
+    );
     return (
       <div>
-        <div class="row between session-bar">
-          <button class="btn ghost small" onClick={() => setMode('home')}>Pause</button>
-          <span class="dim counter">{position} / {total}</span>
-        </div>
         <div class="progress-track" aria-hidden="true"><span style={{ width: `${((position - 1) / total) * 100}%` }} /></div>
         {item.kind === 'puzzle' ? (
-          <PuzzleSolver key={item.id} puzzle={item.puzzle} onDone={(r) => void record(item.id, r)} onNext={next} nextLabel={remaining.some((i) => i.id !== item.id) ? 'Next' : 'Finish'} />
+          <PuzzleSolver key={item.id} puzzle={item.puzzle} onDone={(r) => void record(item.id, r)} onNext={next} nextLabel={remaining.some((i) => i.id !== item.id) ? 'Next' : 'Finish'} aside={aside} />
         ) : (
-          <DrillSolver key={item.id} drill={item.drill} onDone={(r) => void record(item.id, r)} onNext={next} />
+          <DrillSolver key={item.id} drill={item.drill} onDone={(r) => void record(item.id, r)} onNext={next} aside={aside} />
         )}
       </div>
     );
@@ -89,8 +92,8 @@ export function TodayScreen() {
     <div class="stack">
       <div class="card hero">
         <p class="dim" style="margin:0">Today’s session</p>
-        <h2 class="hero-title">{total} items · about 12 minutes</h2>
-        <p class="dim">{session.items.filter((i) => i.kind === 'drill').length} from your own games, the rest themed puzzles.</p>
+        <h2 class="hero-title">{drillCount ? `${total} items` : `${total} themed puzzles`} · about 12 minutes</h2>
+        {drillCount > 0 && <p class="dim">{drillCount} from your own games, then themed puzzles.</p>}
         <button class="btn block" onClick={begin}>
           {doneCount > 0 ? `Continue (${doneCount}/${total})` : 'Start'}
         </button>

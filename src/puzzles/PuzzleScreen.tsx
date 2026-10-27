@@ -56,15 +56,15 @@ export function PuzzleScreen({ puzzleId }: { puzzleId?: string }) {
         <h2>{LADDER.find((s) => s.key === st.current)!.label}</h2>
         <button class="btn block" onClick={() => void start()}>Start 10 puzzles</button>
       </div>
-      <h2 style="margin-top:20px">Your path</h2>
+      <h2 style="margin-top:24px">Your path</h2>
       <ol class="ladder">
         {LADDER.map((s) => {
           const open = st.unlocked.includes(s.key);
           const done = st.mastered.includes(s.key);
           const acc = st.accuracy[s.key];
           return (
-            <li class={`ladder-step ${open ? '' : 'locked'} ${done ? 'done' : ''}`} key={s.key}>
-              <span class="ladder-mark" aria-hidden="true">{done ? '✓' : open ? '•' : ''}</span>
+            <li class={`ladder-step ${open ? '' : 'locked'} ${done ? 'done' : ''} ${s.key === st.current && !done ? 'current' : ''}`} key={s.key}>
+              <span class="ladder-mark" aria-hidden="true">{done ? '✓' : ''}</span>
               <span class="ladder-label">
                 {s.label}
                 <small class="dim">{done ? 'Mastered' : open ? (acc !== undefined ? `${Math.round(acc * 100)}% first try` : 'Not started') : 'Locked'}</small>

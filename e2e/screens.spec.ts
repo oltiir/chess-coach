@@ -7,8 +7,8 @@ const round = process.env.REVIEW_ROUND ?? 'r1';
 for (const scheme of ['light', 'dark'] as const) {
   test.describe(scheme, () => {
     test.use({ colorScheme: scheme });
-    const shot = (page: import('@playwright/test').Page, name: string, project: string) =>
-      page.screenshot({ path: `docs/design-review/${round}/${project}-${scheme}-${name}.png`, fullPage: true });
+    const shot = async (page: import('@playwright/test').Page, name: string, project: string) =>
+      (await page.waitForTimeout(400), page).screenshot({ path: `docs/design-review/${round}/${project}-${scheme}-${name}.png` });
 
     test('screens', async ({ page }, info) => {
       const p = info.project.name;

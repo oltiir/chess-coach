@@ -7,9 +7,9 @@ import { reasonFor } from './reason';
 export interface PuzzleResult { solved: boolean; firstTry: boolean; ms: number }
 type Status = 'setup' | 'play' | 'retry' | 'revealed' | 'solved';
 
-interface Props { puzzle: Puzzle; onDone: (r: PuzzleResult) => void; onNext?: () => void; nextLabel?: string }
+interface Props { puzzle: Puzzle; onDone: (r: PuzzleResult) => void; onNext?: () => void; nextLabel?: string; aside?: preact.ComponentChildren }
 
-export function PuzzleSolver({ puzzle, onDone, onNext, nextLabel = 'Next' }: Props) {
+export function PuzzleSolver({ puzzle, onDone, onNext, nextLabel = 'Next', aside }: Props) {
   const [fen, setFen] = useState(puzzle.fen);
   const [idx, setIdx] = useState(0);
   const [status, setStatus] = useState<Status>('setup');
@@ -74,6 +74,7 @@ export function PuzzleSolver({ puzzle, onDone, onNext, nextLabel = 'Next' }: Pro
       <div class="solver-head">
         <span class={`turn-dot ${player}`} aria-hidden="true" />
         <span>{player === 'white' ? 'White' : 'Black'} to move</span>
+        {aside && <span class="aside">{aside}</span>}
       </div>
       <Board
         fen={fen}
@@ -90,7 +91,7 @@ export function PuzzleSolver({ puzzle, onDone, onNext, nextLabel = 'Next' }: Pro
         {status === 'retry' && (
           <div class="row between">
             <p class="msg bad">Not quite — try again</p>
-            <button class="btn ghost" onClick={reveal}>Show me</button>
+            <button class="btn secondary small" onClick={reveal}>Show me</button>
           </div>
         )}
         {(status === 'solved' || status === 'revealed') && (

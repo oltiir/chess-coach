@@ -4,7 +4,18 @@
   min-width: 260px;
   margin: 0 auto;
 }
-.board { width: 100%; aspect-ratio: 1; }
+.board { width: 100%; aspect-ratio: 1; overflow: clip; }
+/* Coordinates drawn inside the edge squares, in the opposite square colour so they stay readable. */
+.board coords { font-size: 11px; font-weight: 700; opacity: 1; font-family: var(--font); }
+.board coords.ranks { left: 3px; top: 2px; width: auto; height: 100%; }
+.board coords.ranks coord { transform: none; }
+.board coords.files { left: 0; bottom: 1px; width: 100%; height: auto; text-transform: none; text-align: right; }
+.board coords.files coord { padding-right: 3px; }
+.board coords coord:nth-child(odd) { color: var(--sq-light); }
+.board coords coord:nth-child(even) { color: var(--sq-dark); }
+.board coords.black coord:nth-child(odd) { color: var(--sq-dark); }
+.board coords.black coord:nth-child(even) { color: var(--sq-light); }
+@media (max-width: 400px) { .solver .board-wrap { width: calc(100% + 8px); margin-left: -4px; } }
 .board cg-container { position: absolute; }
 cg-board {
   background-color: var(--sq-light);
@@ -13,11 +24,11 @@ cg-board {
   border-radius: 6px;
 }
 :root { --sq-light: #ecdcb9; --sq-dark: #b58a62; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --sq-light: #c9b48f; --sq-dark: #8a6a4b; } }
-:root[data-theme="dark"] { --sq-light: #c9b48f; --sq-dark: #8a6a4b; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --sq-light: #b9a47f; --sq-dark: #7a5c40; --last-move: rgba(155, 199, 0, 0.3); } }
+:root[data-theme="dark"] { --sq-light: #b9a47f; --sq-dark: #7a5c40; --last-move: rgba(155, 199, 0, 0.3); }
 cg-board square.move-dest { background: radial-gradient(rgba(20, 40, 30, 0.35) 20%, transparent 22%); }
 cg-board square.oc.move-dest { background: radial-gradient(transparent 62%, rgba(20, 40, 30, 0.35) 64%); }
-cg-board square.last-move { background-color: rgba(155, 199, 0, 0.38); }
+cg-board square.last-move { background-color: var(--last-move, rgba(155, 199, 0, 0.38)); }
 cg-board square.selected { background-color: rgba(20, 85, 30, 0.45); }
 cg-board square.check { background: radial-gradient(ellipse at center, rgba(255, 0, 0, 1) 0%, rgba(231, 0, 0, 1) 25%, rgba(169, 0, 0, 0) 89%); }
 .promo {
