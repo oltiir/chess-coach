@@ -46,7 +46,7 @@ test('two friends: create, join, see the leaderboard and each other’s games, l
   await olti.getByRole('button', { name: 'Start crew' }).click();
   await expect(olti.getByText('Save your recovery code')).toBeVisible();
   await olti.getByRole('button', { name: 'I saved it' }).click();
-  const code = (await olti.locator('.code').innerText()).trim();
+  const code = await olti.evaluate(async () => (await new Promise<any>((res) => { const r = indexedDB.open('chess-coach'); r.onsuccess = () => { const q = r.result.transaction('kv').objectStore('kv').get('crew-account'); q.onsuccess = () => res(q.result); }; })).code);
   expect(code).toMatch(/^[A-Z2-9]{6}$/);
   await expect(olti.locator('.board-list .level').first()).toHaveText('10');
 

@@ -63,18 +63,24 @@ function JoinCrew({ onJoined }: { onJoined: (a: Account, recovery?: string) => v
         ))}
       </div>
       <form class="card stack" onSubmit={(e) => void submit(e)}>
-        {mode === 'create' ? field('crewName', 'Crew name', { maxLength: 32, placeholder: 'e.g. Saturday chess' }) : field('code', 'Invite code', { maxLength: 6, placeholder: 'ABC123', style: 'text-transform:uppercase' })}
+        {mode === 'recover' && <div class="row between"><h2 style="margin:0">Reset passcode</h2><button type="button" class="btn ghost small" onClick={() => setMode('login')}>Back to log in</button></div>}
+        {mode === 'create' ? field('crewName', 'Crew name', { maxLength: 32, placeholder: 'e.g. Saturday chess' }) : field('code', 'Invite code', { maxLength: 6, placeholder: 'ABC123', autocapitalize: 'characters' })}
         {field('name', 'Your name', { maxLength: 24 })}
         {(mode === 'join' || mode === 'create') && field('chesscom', 'chess.com username', { maxLength: 40 })}
         {mode === 'recover' && field('recovery', 'Recovery code', { placeholder: 'abcd-efgh-jkmn' })}
         {field('passcode', mode === 'recover' ? 'New passcode' : 'Passcode', { type: 'password', minLength: 6, autocomplete: mode === 'login' ? 'current-password' : 'new-password' })}
+        {mode !== 'login' && <small class="dim" style="margin-top:-6px">At least 6 characters</small>}
         {err && <p class="msg bad" role="alert" style="font-size:15px">{err}</p>}
-        <button class="btn block" disabled={busy}>{{ join: 'Join crew', create: 'Start crew', login: 'Log in', recover: 'Set new passcode' }[mode]}</button>
+        <button class="btn block" disabled={busy || !navigator.onLine}>{!navigator.onLine ? 'Needs a connection' : { join: 'Join crew', create: 'Start crew', login: 'Log in', recover: 'Set new passcode' }[mode]}</button>
         {mode === 'login' && <button type="button" class="btn ghost small" onClick={() => setMode('recover')}>Forgot passcode?</button>}
       </form>
     </div>
   );
 }
+
+/** Share sheet on phones (straight to Notes), clipboard elsewhere. */
+const canShare = typeof navigator !== 'undefined' && typeof navigator.share === 'function';
+const saveCode = (code: string) => (canShare ? navigator.share({ text: `Chess Coach recovery code: ${code}` }) : navigator.clipboard.writeText(code));
 
 function RecoveryCard({ code, onDone }: { code: string; onDone: () => void }) {
   const [copied, setCopied] = useState(false);
@@ -84,7 +90,7 @@ function RecoveryCard({ code, onDone }: { code: string; onDone: () => void }) {
       <p class="dim" style="margin:0">If you forget your passcode, this is the only way back in. It won’t be shown again.</p>
       <div class="recovery-code">{code}</div>
       <div class="row">
-        <button class="btn secondary" style="flex:1" onClick={() => void navigator.clipboard?.writeText(code).then(() => setCopied(true))}>{copied ? 'Copied' : 'Copy'}</button>
+        <button class="btn secondary" style="flex:1" onClick={() => void saveCode(code).then(() => setCopied(true)).catch(() => {})}>{copied ? 'Saved' : canShare ? 'Save…' : 'Copy'}</button>
         <button class="btn" style="flex:1" onClick={onDone}>I saved it</button>
       </div>
     </div>
@@ -112,23 +118,36 @@ function CrewHome({ acct, onLeave }: { acct: Account; onLeave: () => void }) {
   const others = crew.members.filter((m) => m.id !== crew.me.id);
   const meRow = crew.members.find((m) => m.id === crew.me.id);
   const suggestion = [...others].sort((a, b) => Math.abs((a.rating ?? 0) - (meRow?.rating ?? 0)) - Math.abs((b.rating ?? 0) - (meRow?.rating ?? 0)))[0];
+  const rivalCard = others.length > 0 && (
+    <section class="card">
+      <h2>Rival</h2>
+      {crew.rival ? (
+        <p style="margin:0 0 8px">You vs <strong>{crew.rival.name}</strong>: {crew.rival.record.wins}–{crew.rival.record.losses}{crew.rival.record.draws ? `–${crew.rival.record.draws}` : ''}
+          {crew.rival.record.cleanOff && <span class="dim"> · fewer hung pieces wins when ratings are far apart</span>}</p>
+      ) : <p class="dim" style="margin:0 0 8px">Pick a friend near your rating; your 15|10 games against each other count here.</p>}
+      <select class="input" aria-label="Rival" value={crew.me.rivalId ?? ''} onChange={async (e) => { await api('/api/rival', { rivalId: (e.target as HTMLSelectElement).value || null }); void load(); }}>
+        <option value="">{crew.rival ? 'No rival' : 'Choose a rival…'}</option>
+        {others.map((m) => <option key={m.id} value={m.id}>{m.name}{m.id === suggestion?.id ? ' (closest rating)' : ''}</option>)}
+      </select>
+    </section>
+  );
+  const recapCard = <Recap recap={crew.recap} crewName={crew.crew.name} />;
+  const monday = new Date().getDay() === 1;
   return (
     <div class="stack crew">
+      <p class="dim crew-name">{crew.crew.name}</p>
       {notice && <p class="dim" role="status">{notice}</p>}
-      <div class="card row between">
-        <div><h2 style="margin:0">{crew.crew.name}</h2><span class="dim">Invite code <strong class="code">{crew.crew.code}</strong></span></div>
-        <button class="btn secondary small" onClick={() => void invite()}>Invite</button>
-      </div>
+      {monday && recapCard}
 
       <section class="card" aria-labelledby="board-title">
-        <h2 id="board-title">Safety Level</h2>
-        <p class="dim small-print" style="margin-top:-4px">Based on pieces hung in your last 10 rapid games. Careful beats strong.</p>
+        <div class="row between"><h2 id="board-title" style="margin:0">Safety Level</h2><button class="btn secondary small" onClick={() => void invite()}>Invite</button></div>
+        <p class="dim small-print" style="margin:4px 0 0">Based on pieces hung in your last 10 rapid games. Careful beats strong.</p>
         <ol class="board-list">
           {crew.members.map((m, i) => (
-            <li key={m.id} class={m.id === crew.me.id ? 'me' : ''}>
+            <li key={m.id}>
               <span class="rank">{m.level === null ? '–' : i + 1}</span>
-              <span class="who"><strong>{m.name}</strong><small class="dim">{m.level === null ? `Calibrating · ${m.games}/5 games` : `${one(m.hpg)} hung/game · ${Math.round(m.zeroHangPct * 100)}% clean games`}</small></span>
-              <span class={`level ${m.level === null ? 'cal' : ''}`} aria-label={m.level === null ? 'No level yet' : `Level ${m.level}`}>{m.level ?? '?'}</span>
+              <span class="who"><strong>{m.name}{m.id === crew.me.id && <span class="dim" style="font-weight:400"> (you)</span>}</strong><small class="dim">{m.level === null ? `Calibrating · ${m.games}/5 games` : `${one(m.hpg)} hung/game · ${Math.round(m.zeroHangPct * 100)}% clean games`}</small></span>
+              <span class={`level ${m.level === null ? 'cal' : ''}`} role="img" aria-label={m.level === null ? 'No level yet' : `Level ${m.level}`}>{m.level ?? '?'}</span>
             </li>
           ))}
         </ol>
@@ -140,36 +159,22 @@ function CrewHome({ acct, onLeave }: { acct: Account; onLeave: () => void }) {
         <div class="quest">
           {crew.members.map((m) => (
             <span key={m.id} class={`quest-dot ${crew.quest.done[m.id] ? 'on' : ''}`} title={m.name}>
-              <span aria-hidden="true">{crew.quest.done[m.id] ? '✓' : ''}</span><small>{m.name}</small>
+              <span aria-hidden="true">{crew.quest.done[m.id] ? '✓' : ''}</span><small>{m.id === crew.me.id ? 'You' : m.name}</small>
             </span>
           ))}
         </div>
       </section>
 
-      {others.length > 0 && (
-        <section class="card">
-          <h2>Rival</h2>
-          {crew.rival ? (
-            <p style="margin:0 0 8px">You vs <strong>{crew.rival.name}</strong>: {crew.rival.record.wins}–{crew.rival.record.losses}{crew.rival.record.draws ? `–${crew.rival.record.draws}` : ''}
-              {crew.rival.record.cleanOff && <span class="dim"> · fewer hung pieces wins when ratings are far apart</span>}</p>
-          ) : <p class="dim" style="margin:0 0 8px">Pick a friend near your rating and play 15|10 games on chess.com. Games against them count here.</p>}
-          <select class="input" aria-label="Rival" value={crew.me.rivalId ?? ''} onChange={async (e) => { await api('/api/rival', { rivalId: (e.target as HTMLSelectElement).value || null }); void load(); }}>
-            <option value="">{crew.rival ? 'No rival' : 'Choose a rival…'}</option>
-            {others.map((m) => <option key={m.id} value={m.id}>{m.name}{m.id === suggestion?.id ? ' (closest rating)' : ''}</option>)}
-          </select>
-        </section>
-      )}
+      {crew.rival && rivalCard}
 
-      <Recap recap={crew.recap} crewName={crew.crew.name} />
-
-      <section>
+      <section class="card">
         <h2>Recent games</h2>
-        {feed.length === 0 && <p class="dim">No analysed rapid games yet. They show up here after the app analyses them on each phone.</p>}
+        {feed.length === 0 && <p class="dim" style="margin:0">No analysed rapid games yet. They show up here after the app analyses them on each phone.</p>}
         <ul class="feed">
           {feed.map((g) => (
             <li key={g.memberId + g.url}>
-              <a class="card feed-item" href={gameHref(g.memberId, g.url)}>
-                <span class="feed-top"><strong>{g.memberName}</strong> <span class={`res ${g.result}`}>{{ win: 'won', loss: 'lost', draw: 'drew' }[g.result] ?? g.result}</span> vs {g.oppName} ({g.oppRating})<span class="dim"> · {date(g.endTime)}</span></span>
+              <a class="feed-item" href={gameHref(g.memberId, g.url)}>
+                <span class="feed-top"><span><strong>{g.memberName}</strong> <span class={`res ${g.result}`}>{{ win: 'won', loss: 'lost', draw: 'drew' }[g.result] ?? g.result}</span> vs {g.oppName} ({g.oppRating})</span><span class="dim feed-date">{date(g.endTime)}</span></span>
                 <span class="stat-line">
                   <span class={g.hangs ? 'bad' : 'good'}>{g.hangs} hung</span>
                   <span>{g.freeMissed} missed</span>
@@ -181,6 +186,9 @@ function CrewHome({ acct, onLeave }: { acct: Account; onLeave: () => void }) {
           ))}
         </ul>
       </section>
+
+      {!monday && recapCard}
+      {!crew.rival && rivalCard}
       <button class="btn ghost small" onClick={onLeave}>Log out of crew on this device</button>
     </div>
   );

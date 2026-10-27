@@ -43,7 +43,7 @@ for (const scheme of ['light', 'dark'] as const) {
     await a.p.getByRole('button', { name: 'Start crew' }).click();
     await shot(a.p, 'recovery');
     await a.p.getByRole('button', { name: 'I saved it' }).click();
-    const code = (await a.p.locator('.code').innerText()).trim();
+    const code = await a.p.evaluate(async () => (await new Promise<any>((res) => { const r = indexedDB.open('chess-coach'); r.onsuccess = () => { const q = r.result.transaction('kv').objectStore('kv').get('crew-account'); q.onsuccess = () => res(q.result); }; })).code);
     for (const { p, name } of rest) {
       await p.goto('/#/crew');
       await p.getByLabel('Invite code').fill(code);

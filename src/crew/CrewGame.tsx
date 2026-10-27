@@ -13,6 +13,10 @@ interface Game {
   moves: string; hangs: number; freeMissed: number; clockUsed: number | null; plies: Ply[]; hidden: boolean; notes: Note[];
 }
 
+/** Chess notation for the move at ply index i: 1. e4, 1… e5 */
+const moveLabel = (i: number, san: string) => `${Math.floor(i / 2) + 1}${i % 2 ? '…' : '.'} ${san}`;
+const prevFen = (moves: string[], n: number) => { const c = new Chess(); for (const m of moves.slice(0, n)) c.move({ from: m.slice(0, 2), to: m.slice(2, 4), promotion: m[4] }); return c.fen(); };
+
 const LABELS: Record<MistakeLabel, string> = {
   'hung-piece': 'Hung a piece', 'missed-free-piece': 'Missed a free piece', 'missed-fork': 'Missed a fork', 'missed-pin': 'Missed a pin',
   'missed-skewer': 'Missed a skewer', 'missed-mate': 'Missed mate', 'allowed-mate': 'Allowed mate', other: 'Mistake',
@@ -75,12 +79,12 @@ export function CrewGame({ memberId, url }: { memberId: string; url: string }) {
       <div class="solver-foot">
         <div class="review-nav">
           <button class="btn secondary small" aria-label="Previous move" disabled={ply <= 0} onClick={() => go(ply - 1)}>‹</button>
-          <span class="pos">{ply === 0 ? 'Start position' : `Move ${ply} of ${moves.length}`}</span>
+          <span class="pos">{ply === 0 ? 'Start position' : `${moveLabel(ply - 1, moves[ply - 1] ? uciToSan(prevFen(moves, ply - 1), moves[ply - 1]) : '')} · ${ply}/${moves.length}`}</span>
           <button class="btn secondary small" aria-label="Next move" disabled={ply >= moves.length} onClick={() => go(ply + 1)}>›</button>
         </div>
         {marked && (
           <div class="moment-detail">
-            <p class="reason"><span class="pill bad">{LABELS[marked.label]}</span> {g.memberName} played <strong>{uciToSan(marked.fenBefore, marked.played)}</strong> (red). {marked.explanation}</p>
+            <p class="reason"><span class="pill bad">{LABELS[marked.label]}</span> {g.memberName} played <strong>{uciToSan(marked.fenBefore, marked.played)}</strong> (red). {mine ? marked.explanation : marked.explanation.replace(/^Your /, `${g.memberName}’s `).replace(/\byou\b/g, 'they')}</p>
             {!mine && <button class="btn secondary small" disabled={tried.has(marked.ply)} onClick={() => void tryIt(marked)}>Try this position</button>}
           </div>
         )}
@@ -88,13 +92,13 @@ export function CrewGame({ memberId, url }: { memberId: string; url: string }) {
           <div class="moments" role="group" aria-label="Marked moves">
             {g.plies.map((p) => (
               <button key={p.ply} class={`moment ${p.ply === ply ? 'on' : ''}`} aria-pressed={p.ply === ply} onClick={() => setPly(p.ply)}>
-                Move {Math.floor(p.ply / 2) + 1}: {uciToSan(p.fenBefore, p.played)}<small>{LABELS[p.label]}</small>
+                {moveLabel(p.ply, uciToSan(p.fenBefore, p.played))}<small>{LABELS[p.label]}</small>
               </button>
             ))}
           </div>
         )}
         <section class="notes" aria-label="Notes on this move">
-          {here.map((n) => <p key={n.createdAt} class="note"><strong>{n.author}:</strong> {n.text}</p>)}
+          {here.map((n) => <p key={n.createdAt} class="crew-note"><strong>{n.author}:</strong> {n.text}</p>)}
           <form class="row" onSubmit={(e) => void addNote(e)}>
             <input class="input" maxLength={140} placeholder={mine ? 'Note to self on this move' : `Tip for ${g.memberName} on this move`} value={note} onInput={(e) => setNote((e.target as HTMLInputElement).value)} aria-label="Note" />
             <button class="btn secondary small" disabled={!note.trim()}>Add</button>
