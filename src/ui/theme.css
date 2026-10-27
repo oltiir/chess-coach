@@ -164,6 +164,7 @@ p { margin: 0 0 12px; }
 .progress-track { height: 4px; border-radius: 4px; background: var(--surface-2); margin-bottom: 12px; overflow: hidden; }
 .progress-track span { display: block; height: 100%; background: var(--accent); transition: width 0.3s; }
 
+.main:has(.solver) .banner { display: none; } /* never shift a board under the player's finger */
 .banner {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
   background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px;
@@ -198,3 +199,26 @@ p { margin: 0 0 12px; }
   padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
 }
 @media (min-width: 900px) { .sheet-backdrop { align-items: center; } .sheet { border-radius: 18px; } }
+
+.big-number { font-size: 44px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; display: flex; align-items: baseline; gap: 12px; }
+.big-number.small { font-size: 32px; }
+.trend { font-size: 15px; font-weight: 600; color: var(--text-dim); }
+.trend.good { color: var(--good); }
+.trend.bad { color: var(--bad); }
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.tiles .card { margin: 0; }
+.tile { font-size: 14px; }
+.tile-value { font-size: 28px; font-weight: 700; margin: 4px 0 2px; font-variant-numeric: tabular-nums; }
+.tile-sub { font-size: 13px; }
+.note { background: var(--accent-soft); border-radius: 12px; padding: 12px 14px; font-size: 15px; }
+.chart { width: 100%; height: auto; display: block; margin-top: 8px; overflow: visible; }
+.chart-line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.chart-dot { fill: var(--accent); stroke: var(--surface); stroke-width: 2; }
+.chart-hit { fill: transparent; }
+.chart-hit:hover { fill: color-mix(in srgb, var(--accent) 18%, transparent); }
+.chart-grid { stroke: var(--line); stroke-width: 1; }
+.chart-axis { fill: var(--text-dim); font-size: 11px; font-family: var(--font); }
+.bar-row { margin: 10px 0; }
+.bar-head { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 4px; gap: 8px; }
+.bar-track { height: 8px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+.bar-track span { display: block; height: 100%; background: var(--accent); border-radius: 4px; }

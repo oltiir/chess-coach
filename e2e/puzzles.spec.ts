@@ -1,5 +1,4 @@
-import { test, expect } from '@playwright/test';
-import { noVerticalScroll, playMove } from './helpers';
+import { expect, noVerticalScroll, playMove, test } from './helpers';
 
 // 00rTX: White plays Rxd2, then Black mates with Qxe1#.
 test('a black-to-move puzzle: try again, then reveal', async ({ page }, info) => {

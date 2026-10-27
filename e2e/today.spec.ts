@@ -1,6 +1,6 @@
-import { test, expect, type Page } from '@playwright/test';
+import { expect, playMove, test } from './helpers';
+import type { Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
-import { playMove } from './helpers';
 
 const solutions = new Map(
   readFileSync('public/data/puzzles.tsv', 'utf8').trim().split('\n').map((l) => {

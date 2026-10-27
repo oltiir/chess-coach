@@ -1,5 +1,5 @@
-import { test, expect, type Page } from '@playwright/test';
-import { playMove } from './helpers';
+import { expect, playMove, test } from './helpers';
+import type { Page } from '@playwright/test';
 
 const drill = {
   id: 'test-drill', fen: 'rnbqkbnr/ppp2ppp/3p4/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3', best: 'd2d4', played: 'f3g5',

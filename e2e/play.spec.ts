@@ -1,5 +1,4 @@
-import { test, expect } from '@playwright/test';
-import { noVerticalScroll, playMove } from './helpers';
+import { expect, noVerticalScroll, playMove, test } from './helpers';
 
 const HANG = 'rnbqkbnr/ppp2ppp/3p4/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3';
 const url = (fen: string) => `/#/play/${encodeURIComponent(fen)}`;

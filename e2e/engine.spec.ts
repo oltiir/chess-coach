@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect } from './helpers';
 
 test('the Stockfish lite worker runs in the browser and finds mate in one', async ({ page }) => {
   await page.goto('/');

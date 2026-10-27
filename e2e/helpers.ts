@@ -1,4 +1,13 @@
-import type { Page } from '@playwright/test';
+import { test as base, expect, type Page } from '@playwright/test';
+
+/** Tests never hit the real chess.com API unless they route it themselves. */
+export const test = base.extend<{ blockChessCom: void }>({
+  blockChessCom: [async ({ page }, use) => {
+    await page.route('https://api.chess.com/**', (r) => r.abort('internetdisconnected'));
+    await use();
+  }, { auto: true }],
+});
+export { expect };
 
 /** Clicks a board square (e.g. "e2") taking the board orientation into account. */
 export async function clickSquare(page: Page, sq: string) {

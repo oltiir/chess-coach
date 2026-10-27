@@ -1,5 +1,4 @@
-import { test, expect } from '@playwright/test';
-import { playMove } from './helpers';
+import { expect, playMove, test } from './helpers';
 
 // Captures every screen for design review: npx playwright test e2e/screens.spec.ts
 const round = process.env.REVIEW_ROUND ?? 'r1';
