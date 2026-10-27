@@ -9,7 +9,6 @@ import { makeDrills, saveDrills } from '../drills/makeDrills';
 import { kvGet, kvSet, openDb } from '../store/db';
 import { getSettings } from '../store/exportImport';
 import type { Drill, GameAnalysis, GameRecord } from '../store/types';
-import { SafetyCheckCard } from '../ui/SafetyCheckCard';
 import { checkMove } from './alarm';
 import { getBot, warmBot } from './maia';
 
@@ -17,6 +16,7 @@ interface BotGame {
   id: string; startFen: string; moves: string[]; color: 'w' | 'b'; elo: number; playerElo: number;
   alarm: boolean; clock: { left: number; inc: number } | null; alarms: number;
   over?: { result: 'win' | 'loss' | 'draw'; why: string };
+  reviewing?: boolean;
 }
 
 const START = new Chess().fen();
@@ -49,7 +49,7 @@ export function PlayScreen({ startFen }: { startFen?: string }) {
 
   if (game === undefined) return null;
   if (!game) return <Setup startFen={startFen} onStart={save} />;
-  if (game.over) return <Review game={game} onNew={() => save(null)} />;
+  if (game.over && game.reviewing) return <Review game={game} onNew={() => save(null)} />;
   return <Game game={game} onChange={save} />;
 }
 
@@ -104,7 +104,14 @@ function Setup({ startFen, onStart }: { startFen?: string; onStart: (g: BotGame)
   );
 }
 
-function Game({ game, onChange }: { game: BotGame; onChange: (g: BotGame) => void }) {
+function resultTitle(o: NonNullable<BotGame['over']>): string {
+  if (o.why === 'Checkmate') return o.result === 'win' ? 'Checkmate — you won' : 'Checkmate — Maia won';
+  if (o.why === 'Resigned') return 'You resigned';
+  if (o.why === 'Out of time') return 'Out of time — Maia won';
+  return `Draw — ${o.why.toLowerCase()}`;
+}
+
+function Game({ game, onChange }: { game: BotGame; onChange: (g: BotGame | null) => void }) {
   const c = replay(game);
   const fen = c.fen();
   const myTurn = c.turn() === game.color;
@@ -139,7 +146,7 @@ function Game({ game, onChange }: { game: BotGame; onChange: (g: BotGame) => voi
 
   // Player's clock
   useEffect(() => {
-    if (!game.clock || !myTurn) return;
+    if (!game.clock || !myTurn || game.over) return;
     setLeft(game.clock.left);
     const t = setInterval(() => setLeft((s) => {
       if (s <= 1) { clearInterval(t); onChange({ ...gRef.current, over: { result: 'loss', why: 'Out of time' } }); return 0; }
@@ -162,11 +169,12 @@ function Game({ game, onChange }: { game: BotGame; onChange: (g: BotGame) => voi
 
   const last = game.moves[game.moves.length - 1];
   const orientation = game.color === 'w' ? 'white' : 'black';
+  const over = game.over;
   return (
     <div class="solver">
       <div class="solver-head">
         <span class={`turn-dot ${c.turn() === 'w' ? 'white' : 'black'}`} aria-hidden="true" />
-        <span>{checking ? 'Checking your move…' : myTurn ? 'Your move' : 'Maia is thinking…'}</span>
+        <span>{over ? 'Game over' : checking ? 'Checking your move…' : myTurn ? 'Your move' : 'Maia is thinking…'}</span>
         <span class="aside">
           {game.clock && <span class={`clock ${left < 60 ? 'low' : ''}`}>{Math.floor(left / 60)}:{String(left % 60).padStart(2, '0')}</span>}
           <span class="pill">Maia {game.elo}</span>
@@ -175,13 +183,22 @@ function Game({ game, onChange }: { game: BotGame; onChange: (g: BotGame) => voi
       <Board
         fen={pending ? pending.fen : fen}
         orientation={orientation}
-        movable={myTurn && !pending && !checking}
+        movable={!over && myTurn && !pending && !checking}
         onMove={(u) => void onMove(u)}
         lastMove={pending ? [pending.uci.slice(0, 2), pending.uci.slice(2, 4)] : last ? [last.slice(0, 2), last.slice(2, 4)] : undefined}
         nonce={nonce}
       />
       <div class="solver-foot">
-        {pending?.alarm ? (
+        {over ? (
+          <div class={`card result ${over.result}`} role="status" aria-label="Game result">
+            <h2>{resultTitle(over)}</h2>
+            <p class="dim">vs Maia {game.elo}{game.alarm ? ` · the alarm stopped you ${game.alarms}×` : ''}</p>
+            <div class="row">
+              <button class="btn" style="flex:1" onClick={() => onChange({ ...game, reviewing: true })}>Review game</button>
+              <button class="btn secondary" onClick={() => onChange(null)}>New game</button>
+            </div>
+          </div>
+        ) : pending?.alarm ? (
           <div class="card alarm" role="alertdialog" aria-label="Blunder alarm">
             <h2>Look again: what can they capture after this?</h2>
             <p class="dim">You’re about to play {uciToSan(fen, pending.uci)}. Run the safety check first.</p>
@@ -201,16 +218,23 @@ function Game({ game, onChange }: { game: BotGame; onChange: (g: BotGame) => voi
   );
 }
 
+const LABELS: Record<Drill['label'], string> = {
+  'hung-piece': 'Hung a piece', 'missed-free-piece': 'Missed a free piece', 'missed-fork': 'Missed a fork',
+  'missed-pin': 'Missed a pin', 'missed-skewer': 'Missed a skewer', 'missed-mate': 'Missed mate',
+  'allowed-mate': 'Allowed mate', other: 'Mistake',
+};
+
 function Review({ game, onNew }: { game: BotGame; onNew: () => void }) {
   const [analysis, setAnalysis] = useState<GameAnalysis | null>(null);
   const [drills, setDrills] = useState<Drill[]>([]);
+  const [sel, setSel] = useState(0);
   const [added, setAdded] = useState<Set<string>>(new Set());
+  const final = replay(game);
   useEffect(() => {
     void (async () => {
-      const c = replay(game);
       const rec: GameRecord = {
         url: `bot:${game.id}`, endTime: Date.now(), timeClass: 'bot', timeControl: '-', myColor: game.color,
-        myRating: game.playerElo, oppRating: game.elo, oppName: `Maia ${game.elo}`, result: game.over!.result, pgn: c.pgn(),
+        myRating: game.playerElo, oppRating: game.elo, oppName: `Maia ${game.elo}`, result: game.over!.result, pgn: final.pgn(),
       };
       const db = await openDb();
       const a = { ...(await analyseGame(rec, getEngine(), 100_000)) };
@@ -221,27 +245,54 @@ function Review({ game, onNew }: { game: BotGame; onNew: () => void }) {
       setDrills(makeDrills(a, rec));
     })();
   }, [game.id]);
-  const title = { win: 'You won', loss: 'You lost', draw: 'Draw' }[game.over!.result];
+
+  const d = drills[sel];
+  const moveNo = (fen: string) => fen.split(' ')[5];
+  const orientation = game.color === 'w' ? 'white' : 'black';
+  const last = game.moves[game.moves.length - 1];
   return (
-    <div class="stack">
-      <div class="card">
-        <h2>{title}</h2>
-        <p class="dim">{game.over!.why} · vs Maia {game.elo}{game.alarm ? ` · alarm stopped you ${game.alarms}×` : ''}</p>
-        {analysis && <p>{analysis.stats.hangs === 0 ? 'No hung pieces. Nice and careful.' : `Pieces hung: ${analysis.stats.hangs}`}</p>}
+    <div class="solver review">
+      <div class="solver-head">
+        <span>{resultTitle(game.over!)}</span>
+        <span class="aside"><button class="btn secondary small" onClick={onNew}>New game</button></span>
       </div>
-      <h2>Key moments</h2>
-      {!analysis && <p class="dim">Reviewing your game…</p>}
-      {analysis && drills.length === 0 && <p class="dim">No big mistakes found.</p>}
-      {drills.map((d) => (
-        <div class="card" key={d.id}>
-          <p><strong>{uciToSan(d.fen, d.played)}</strong> — {d.explanation}</p>
-          <button class="btn secondary small" disabled={added.has(d.id)} onClick={() => { void saveDrills([d]); setAdded(new Set([...added, d.id])); }}>
-            {added.has(d.id) ? 'Added to Today' : 'Practise this'}
+      <Board
+        fen={d ? d.fen : final.fen()}
+        orientation={orientation}
+        movable={false}
+        lastMove={d ? undefined : last ? [last.slice(0, 2), last.slice(2, 4)] : undefined}
+        arrows={d ? [{ from: d.played.slice(0, 2), to: d.played.slice(2, 4), color: 'red' }, { from: d.best.slice(0, 2), to: d.best.slice(2, 4), color: 'green' }] : undefined}
+      />
+      <div class="solver-foot">
+        {!analysis && <p class="dim">Reviewing your game…</p>}
+        {analysis && !drills.length && <p>No big mistakes found{analysis.stats.hangs === 0 ? ' and no hung pieces' : ''}. Nice and careful.</p>}
+        {d && (
+          <div class="moment-detail">
+            <p class="reason">
+              <span class="pill bad">{LABELS[d.label]}</span> You played <strong>{uciToSan(d.fen, d.played)}</strong> (red). {d.explanation}
+            </p>
+            <button class="btn secondary small" disabled={added.has(d.id)} onClick={() => { void saveDrills([d]); setAdded(new Set([...added, d.id])); }}>
+              {added.has(d.id) ? 'Added to Today' : 'Practise this'}
+            </button>
+          </div>
+        )}
+        {drills.length > 1 && (
+          <div class="moments" role="group" aria-label="Key moments">
+            {drills.map((x, i) => (
+              <button key={x.id} class={`moment ${i === sel ? 'on' : ''}`} aria-pressed={i === sel} onClick={() => setSel(i)}>
+                Move {moveNo(x.fen)}: {uciToSan(x.fen, x.played)}
+                <small>{LABELS[x.label]}</small>
+              </button>
+            ))}
+          </div>
+        )}
+        {drills.length === 1 && (
+          <button class="moment on" aria-pressed="true" onClick={() => setSel(0)}>
+            Move {moveNo(drills[0].fen)}: {uciToSan(drills[0].fen, drills[0].played)}
+            <small>{LABELS[drills[0].label]}</small>
           </button>
-        </div>
-      ))}
-      <SafetyCheckCard />
-      <button class="btn block" onClick={onNew}>New game</button>
+        )}
+      </div>
     </div>
   );
 }

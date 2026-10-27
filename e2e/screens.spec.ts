@@ -66,6 +66,9 @@ for (const scheme of ['light', 'dark'] as const) {
       await expect(page.getByText('Your move')).toBeVisible({ timeout: 30_000 });
       await shot(page, 'play-game', p);
       await page.getByRole('button', { name: 'Resign' }).click();
+      await expect(page.getByRole('status', { name: 'Game result' })).toBeVisible();
+      await shot(page, 'play-over', p);
+      await page.getByRole('button', { name: 'Review game' }).click();
       await expect(page.getByRole('button', { name: 'Practise this' }).first()).toBeVisible({ timeout: 60_000 });
       await shot(page, 'play-review', p);
       await page.getByRole('button', { name: 'Practise this' }).first().click();

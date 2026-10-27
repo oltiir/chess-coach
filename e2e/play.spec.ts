@@ -26,8 +26,8 @@ test('test mode plays the move without stopping, and resign shows a review', asy
   await expect(page.getByRole('alertdialog', { name: 'Blunder alarm' })).toHaveCount(0);
   await expect(page.getByText('Your move')).toBeVisible({ timeout: 30_000 });
   await page.getByRole('button', { name: 'Resign' }).click();
-  await expect(page.getByText('You lost')).toBeVisible();
-  await expect(page.getByText('Key moments')).toBeVisible();
+  await expect(page.getByText('You resigned')).toBeVisible();
+  await page.getByRole('button', { name: 'Review game' }).click();
   await expect(page.getByRole('button', { name: 'Practise this' }).first()).toBeVisible({ timeout: 60_000 });
 });
 
