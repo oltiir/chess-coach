@@ -1,0 +1,11 @@
+// Static site on Cloudflare (Workers static assets). Only ./dist is uploaded.
+// Deploy: npm run deploy  (log in once with `npx wrangler login`; never put tokens in this repo)
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "chess-coach",
+  "compatibility_date": "2026-10-23",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  }
+}

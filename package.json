@@ -9,7 +9,8 @@
     "build": "node scripts/fetch-model.mjs && node scripts/copy-assets.mjs && vite build && node scripts/check-size.mjs",
     "preview": "vite preview --port 4173",
     "test": "vitest run",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {
     "@lichess-org/chessground": "^10.5.0",
@@ -27,6 +28,7 @@
     "typescript": "^7.0.2",
     "vite": "^8.3.5",
     "vite-plugin-pwa": "^2.0.0",
-    "vitest": "^5.0.5"
+    "vitest": "^5.0.5",
+    "wrangler": "^4.154.0"
   }
 }

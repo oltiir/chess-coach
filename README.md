@@ -6,6 +6,13 @@ A personal chess trainer that works offline on an iPhone (add it to the home scr
 - **Play**: a human-like bot (Maia-3) with a blunder alarm that stops you before you hang a piece.
 - **Progress**: pieces hung per game in your real rapid games, rating, puzzle accuracy per theme.
 
+**Live:** https://chess-coach.desk-buddy.workers.dev
+
+### Install on iPhone
+1. Open the link in **Safari**.
+2. Tap **Share** → **Add to Home Screen** → **Add**.
+3. Open it once from the home screen while online and wait a minute; after that it works in airplane mode.
+
 Design: `docs/superpowers/specs/2026-10-27-chess-coach-design.md`.
 
 ## Run
@@ -16,6 +23,7 @@ node scripts/fetch-model.mjs   # downloads the Maia-3 model (~11 MB)
 npm run dev
 npm test        # unit tests
 npm run e2e     # browser tests (iPhone, small iPhone, desktop)
+npm run deploy  # build and publish to Cloudflare (run `npx wrangler login` once)
 ```
 
 ## Licences

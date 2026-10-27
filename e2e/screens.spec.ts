@@ -1,7 +1,7 @@
 import { expect, playMove, test } from './helpers';
 
 // Captures every screen for design review: npx playwright test e2e/screens.spec.ts
-const round = process.env.REVIEW_ROUND ?? 'r1';
+const round = process.env.REVIEW_ROUND ?? 'latest';
 const HANG = 'rnbqkbnr/ppp2ppp/3p4/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3';
 
 async function seedProgress(page: import('@playwright/test').Page) {
