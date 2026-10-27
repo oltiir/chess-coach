@@ -43,12 +43,46 @@ export class MaiaBot implements Bot {
 
   /** Samples a move at temperature 1, so the bot varies its play like a person does. */
   async chooseMove(fen: string, botElo: number, playerElo: number): Promise<string> {
-    const pol = await this.policy(fen, botElo, playerElo);
-    let r = Math.random();
-    for (const m of pol) { r -= m.p; if (r <= 0) return m.uci; }
-    return pol[0].uci;
+    return sample(await this.policy(fen, botElo, playerElo));
   }
 }
 
-let bot: Promise<MaiaBot> | null = null;
-export const getBot = (): Promise<Bot> => (bot ??= MaiaBot.load(`${import.meta.env.BASE_URL}models/maia3-5m.fp16.onnx`));
+/** Sample a move from a policy at temperature 1. */
+export function sample(pol: { uci: string; p: number }[]): string {
+  let r = Math.random();
+  for (const m of pol) { r -= m.p; if (r <= 0) return m.uci; }
+  return pol[0].uci;
+}
+
+/** Talks to Maia running in a Web Worker. */
+class WorkerBot implements Bot {
+  private w = new Worker(new URL('./maia.worker.ts', import.meta.url), { type: 'module' });
+  private next = 0;
+  private waiting = new Map<number, (r: { ok: boolean; policy?: { uci: string; p: number }[]; error?: string }) => void>();
+  private url = `${import.meta.env.BASE_URL}models/maia3-5m.fp16.onnx`;
+
+  constructor() {
+    this.w.onmessage = (e) => { this.waiting.get(e.data.id)?.(e.data); this.waiting.delete(e.data.id); };
+  }
+
+  private ask(fen: string, self: number, oppo: number) {
+    const id = this.next++;
+    return new Promise<{ ok: boolean; policy?: { uci: string; p: number }[]; error?: string }>((res) => {
+      this.waiting.set(id, res);
+      this.w.postMessage({ id, url: this.url, fen, self, oppo });
+    });
+  }
+
+  /** Loads the model in the background so the first move isn't slow. */
+  async warm() { await this.ask('', 0, 0); }
+
+  async chooseMove(fen: string, botElo: number, playerElo: number): Promise<string> {
+    const r = await this.ask(fen, botElo, playerElo);
+    if (!r.ok || !r.policy) throw new Error(r.error ?? 'Maia failed');
+    return sample(r.policy);
+  }
+}
+
+let bot: WorkerBot | null = null;
+export const getBot = (): Promise<Bot> => Promise.resolve((bot ??= new WorkerBot()));
+export const warmBot = () => void (bot ??= new WorkerBot()).warm();

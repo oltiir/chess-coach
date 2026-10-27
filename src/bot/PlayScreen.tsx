@@ -11,7 +11,7 @@ import { getSettings } from '../store/exportImport';
 import type { Drill, GameAnalysis, GameRecord } from '../store/types';
 import { SafetyCheckCard } from '../ui/SafetyCheckCard';
 import { checkMove } from './alarm';
-import { getBot } from './maia';
+import { getBot, warmBot } from './maia';
 
 interface BotGame {
   id: string; startFen: string; moves: string[]; color: 'w' | 'b'; elo: number; playerElo: number;
@@ -41,6 +41,7 @@ export function PlayScreen({ startFen }: { startFen?: string }) {
   const [game, setGame] = useState<BotGame | null | undefined>(undefined);
   useEffect(() => {
     pauseAnalysis();
+    warmBot();
     void kvGet<BotGame>('bot-game').then((g) => setGame(startFen ? null : g ?? null));
     return () => resumeAnalysis();
   }, []);
@@ -107,7 +108,7 @@ function Game({ game, onChange }: { game: BotGame; onChange: (g: BotGame) => voi
   const c = replay(game);
   const fen = c.fen();
   const myTurn = c.turn() === game.color;
-  const [pending, setPending] = useState<{ uci: string; fen: string } | null>(null);
+  const [pending, setPending] = useState<{ uci: string; fen: string; alarm: boolean } | null>(null);
   const [checking, setChecking] = useState(false);
   const [nonce, setNonce] = useState(0);
   const [left, setLeft] = useState(game.clock?.left ?? 0);
@@ -148,13 +149,15 @@ function Game({ game, onChange }: { game: BotGame; onChange: (g: BotGame) => voi
   }, [myTurn, game.moves.length]);
 
   const onMove = async (uci: string) => {
-    if (!myTurn || checking) return;
+    if (!myTurn || checking || pending) return;
     if (!game.alarm) return commit(uci);
+    // Keep the piece where the player put it while the coach checks the move.
+    setPending({ uci, fen: play(fen, uci)!.fen(), alarm: false });
     setChecking(true);
     const r = await checkMove(fen, uci, getEngine()).catch(() => ({ alarm: false }));
     setChecking(false);
-    if (r.alarm) setPending({ uci, fen: play(fen, uci)!.fen() });
-    else commit(uci);
+    if (r.alarm) setPending({ uci, fen: play(fen, uci)!.fen(), alarm: true });
+    else { setPending(null); commit(uci); }
   };
 
   const last = game.moves[game.moves.length - 1];
@@ -178,7 +181,7 @@ function Game({ game, onChange }: { game: BotGame; onChange: (g: BotGame) => voi
         nonce={nonce}
       />
       <div class="solver-foot">
-        {pending ? (
+        {pending?.alarm ? (
           <div class="card alarm" role="alertdialog" aria-label="Blunder alarm">
             <h2>Look again: what can they capture after this?</h2>
             <p class="dim">You’re about to play {uciToSan(fen, pending.uci)}. Run the safety check first.</p>
