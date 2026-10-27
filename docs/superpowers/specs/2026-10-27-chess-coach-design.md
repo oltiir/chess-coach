@@ -135,13 +135,76 @@ Other rules for the session:
   - **Import merges, it never replaces (my call).** Progress is stored as an append-only log of attempts with stable IDs. Repeat schedules, mastery and stats are derived from that log, so merging two devices' exports loses nothing.
   - **Analysis results travel in the export,** so games analysed on the faster laptop aren't redone on the phone.
 
+### 7. Crew (social layer, phase 2)
+The player and about 5 friends, at mixed levels, all on chess.com. They want to compete *and* help each other, and they agreed that games and mistakes are visible within the crew.
+
+**The crew layer is optional.** The trainer must work fully offline with no account. Everything below needs the small server (see Constraints), and actions taken offline are queued and sent once a connection returns.
+
+The ideas were brainstormed by one agent, challenged by a second, and agreed with the player. The reasoning behind them:
+- Rewards for volume and raw-Elo leaderboards demotivate the weakest member (Deci/Koestner/Ryan 1999 meta-analysis; leaderboard studies).
+- Speed modes train the rushing that causes hung pieces.
+- Hand-made events die after two weeks, while content generated automatically from games people already play keeps going.
+
+1. **Crew join.**
+   - One person creates a crew and shares an invite code.
+   - Each member picks a display name and a passcode, and links their chess.com username. No email.
+   - Passcodes are hashed with PBKDF2 (WebCrypto) in the Worker. Login attempts are rate-limited. A one-time recovery code is shown at signup.
+   - The member's rating and games import automatically. Their puzzle band and bot Elo are seeded from their rating, and the adaptive band takes over after about 20 puzzles.
+   - **Calibrating:** for their first 5 analysed rapid games a member has no level or rank, only feed entries.
+2. **Crew feed, FACEIT-style match history.** Every member's recent rapid games, newest first.
+   - Each game shows one stat line: result, opponent rating, pieces hung, free pieces missed, % of clock used.
+   - Tapping a game opens a replay with the hangs and blunders marked.
+   - Any marked move has **"try this position"**, which opens it as a drill.
+   - A member can **hide** any of their own games.
+   - Highlights are positive: a punishment found or a tactic spotted. Never a blunder reel.
+3. **Profile and Safety Level 1–10.**
+   - The level is based on pieces hung per game over the member's last 10 analysed rapid games, **not** on rating, so a careful 570 can outrank a careless 1200.
+   - A margin before moving up or down stops the level flapping.
+   - The profile shows Safety Level, rating, and last-5 / last-20 splits for hangs, clock used and zero-hang %. It reuses the Progress screen components.
+   - **The crew leaderboard is sorted by Safety Level.** This is the ranking the player asked for.
+4. **Coach notes.** Tap a move in a crew member's game and leave a one-line note and/or an arrow. Notes appear on that member's replay, and stronger friends get to teach.
+5. **Rivals.**
+   - Two members within about ±150 rating are paired for a 2-week series of 15|10 games, played on chess.com.
+   - The app detects their games against each other from the imports and keeps a head-to-head record.
+   - For pairs further apart in rating, use **clean-off** scoring: the player with fewer hung pieces wins the game, whatever the result.
+   - Drills come only from your own games. A friend's miss is never served to you with their name on it unless they opt in.
+6. **Crew quest.**
+   - One shared weekly goal based on game behaviour, with a per-person cap, e.g. "everyone plays 3 rapid games using at least 50% of their clock".
+   - Shown as one dot per member, so nobody can carry the crew.
+   - No goals based on puzzle volume.
+7. **Monday recap card.**
+   - Contents: each member's week in one line, most improved, the week's best tactic found, the quest result, and new milestone badges ("first zero-hang game", "forks mastered").
+   - **Most improved** needs at least 3 rapid games that week, measured as hangs per 20 own moves while the eval is within ±5, smoothed toward the member's own baseline.
+   - The card can be shared to the group chat as an image.
+
+**Shared analysis:**
+- Each device analyses only its owner's games. It uploads a small analysis record per game to D1, keyed by the chess.com game URL: hang plies, eval swings, the stat line. The PGN is not uploaded; it is public on chess.com.
+- A game between two crew members is analysed once, by whichever device reaches it first.
+- Analysis uses a **fixed node count, not a time limit**, so every device produces the same result for the same game.
+- The laptop has a "help analyse crew backlog" button for friends who rarely open the app.
+
+**Cut after challenge:**
+- A weekly improvement ranking with places 1–6: noisy, and gameable by playing less.
+- A Daily Five Wordle grid: everyone's grid would be nearly full.
+- Puzzle-volume quests.
+- A standalone "beat my blunder" flow: merged into the feed.
+
+**Deferred:** a crew position of the day, live puzzle races, and in-app games between friends.
+
+**Would backfire, so never add:**
+- raw-Elo or puzzles-solved leaderboards
+- speed modes
+- streaks or win-streak points
+- XP per puzzle
+- points announced in advance for winning
+
 ## Non-goals (for now)
 - Openings training. At this level one simple setup is enough.
-- Accounts, a backend, or automatic sync between phone and laptop. Export/import covers it.
+- Automatic sync of personal training data between phone and laptop. Export/import covers it. The crew server stores only crew data: the profile, per-game analysis records, notes and quests. It does not store puzzle history.
 - An AI/LLM chat coach. Explanations come from rules so the app works offline and costs nothing.
 - A native App Store app.
 - Blitz or bullet support.
-- Multiplayer, or playing real people inside the app.
+- Playing real people inside the app. Crew games are played on chess.com.
 
 ## Anti-goals (would make it a failure even if it works)
 - **A coach that is confidently wrong.** A mislabelled explanation is worse than a plain one. When the classifier is unsure, fall back to "this lost material; best was X".
@@ -158,6 +221,10 @@ Other rules for the session:
   - Deploy only the build output folder (`dist/`).
   - Keep Cloudflare tokens outside the project folder.
   - Wrangler can upload the working directory as public assets.
+- **Crew server:**
+  - A Cloudflare Worker plus D1 on the free tier, in a separate `worker/` folder deployed on its own.
+  - The free limits are far above what about 6 users need.
+  - A crew member who is offline loses nothing. Feed and leaderboard data is cached for viewing offline.
 - **Storage:**
   - IndexedDB is the main copy. Call `navigator.storage.persist()` on launch.
   - Safari-tab storage and home-screen storage are separate. The home-screen app is the "real" one.
@@ -212,4 +279,7 @@ Other rules for the session:
 - **Engine search settings:** depth or time per move, for analysis and for the alarm. The alarm must respond in about 1 s or less.
 - **The exact puzzle-selection algorithm** within the rules above.
 - **The fallback if Maia-3 in the browser fails:** a "humanised" Stockfish that picks from MultiPV with a temperature and occasionally plays a human-style miss, but never drops a piece at random.
-- **Order of building.** Suggested: puzzles and Today first (most value, least risk), then importing and analysing chess.com games, then the bot, then the progress charts.
+- **Order of building, in two phases.**
+  - **Phase 1, the personal trainer:** puzzles and Today first (most value, least risk), then chess.com import and analysis, then the bot, then Progress.
+  - **Phase 2, the crew layer:** join and profile, then feed and replay, then Safety Level and leaderboard, then coach notes, rivals, quest and recap.
+  - Phase 1 must be usable and released on its own before Phase 2 starts.
