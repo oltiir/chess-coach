@@ -67,3 +67,16 @@ describe('daysTrainedThisWeek', () => {
     expect(daysTrainedThisWeek(list, NOW)).toBe(2);
   });
 });
+
+describe('finishItem', () => {
+  it('logs the attempt and marks the item done together', async () => {
+    const { finishItem } = await import('../../src/today/session');
+    const db = await openDb();
+    const s = await buildSession(NOW, [], [], db, 700);
+    const id = s.items[0].id;
+    await finishItem(NOW, id, { kind: 'puzzle', itemId: id.slice(2), ts: NOW, firstTry: true, solved: true, ms: 1 });
+    const again = await buildSession(NOW, [], [], db, 700);
+    expect(again.doneIds).toEqual([id]);
+    expect(await db.count('attempts')).toBe(1);
+  });
+});

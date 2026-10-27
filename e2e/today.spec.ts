@@ -35,6 +35,7 @@ test('a session survives a reload mid-way', async ({ page }) => {
   await page.getByRole('button', { name: 'Next' }).click();
   await expect(page.getByText('2 / 10')).toBeVisible();
   await solveCurrent(page);
+  await page.waitForTimeout(300); // let the write land, as any real close would
   await page.reload();
   await page.getByRole('button', { name: 'Continue (2/10)' }).click({ timeout: 20_000 });
   await expect(page.getByText('3 / 10')).toBeVisible();

@@ -1,5 +1,6 @@
 import { openDb, type DB } from '../store/db';
 import type { Attempt, Drill, Puzzle } from '../store/types';
+import { deviceId } from '../store/attempts';
 import { dueItems } from '../puzzles/schedule';
 import { pickNewPuzzles } from '../puzzles/select';
 
@@ -65,4 +66,16 @@ export function daysTrainedThisWeek(attempts: Attempt[], now: number): number {
   const d = new Date(now);
   const monday = new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7)).getTime();
   return new Set(attempts.filter((a) => a.ts >= monday && a.ts <= now).map((a) => dayKey(a.ts))).size;
+}
+
+/** Logs the attempt and marks the session item done in one transaction, so closing the app can't split them. */
+export async function finishItem(now: number, itemId: string, a: Omit<Attempt, 'id' | 'device'>) {
+  const db = await openDb();
+  const device = await deviceId();
+  const key = `session-${dayKey(now)}`;
+  const tx = db.transaction(['attempts', 'kv'], 'readwrite');
+  void tx.objectStore('attempts').put({ ...a, id: crypto.randomUUID(), device });
+  const saved = (await tx.objectStore('kv').get(key)) as { itemIds: string[]; doneIds: string[] } | undefined;
+  if (saved && !saved.doneIds.includes(itemId)) await tx.objectStore('kv').put({ ...saved, doneIds: [...saved.doneIds, itemId] }, key);
+  await tx.done;
 }

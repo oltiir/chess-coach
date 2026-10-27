@@ -8,7 +8,7 @@ import { getSettings } from '../store/exportImport';
 import { SafetyCheckCard } from '../ui/SafetyCheckCard';
 import { DrillSolver } from '../drills/DrillSolver';
 import type { Drill } from '../store/types';
-import { buildSession, daysTrainedThisWeek, markDone, type Session } from './session';
+import { buildSession, daysTrainedThisWeek, finishItem, type Session } from './session';
 
 type Mode = 'home' | 'running' | 'summary';
 
@@ -51,11 +51,11 @@ export function TodayScreen({ drillId }: { drillId?: string }) {
 
   const record = async (id: string, r: PuzzleResult) => {
     const item = session.items.find((i) => i.id === id)!;
-    if (item.kind === 'puzzle')
-      await logAttempt({ kind: 'puzzle', itemId: item.puzzle.id, ts: Date.now(), ...r, theme: stepOf(item.puzzle), rating: item.puzzle.rating });
-    else await logAttempt({ kind: 'drill', itemId: item.drill.id, ts: Date.now(), ...r });
+    const attempt = item.kind === 'puzzle'
+      ? { kind: 'puzzle' as const, itemId: item.puzzle.id, ts: Date.now(), ...r, theme: stepOf(item.puzzle), rating: item.puzzle.rating }
+      : { kind: 'drill' as const, itemId: item.drill.id, ts: Date.now(), ...r };
     setResults((x) => ({ ...x, [id]: r.firstTry }));
-    await markDone(Date.now(), id); // finished items stay finished even if the app is closed now
+    await finishItem(Date.now(), id, attempt);
     setSession((s) => s && { ...s, doneIds: [...s.doneIds, id] });
   };
   const next = () => {
