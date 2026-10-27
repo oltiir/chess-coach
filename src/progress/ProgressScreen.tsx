@@ -64,7 +64,7 @@ export function ProgressScreen() {
 
       <div class="tiles">
         <div class="card tile">
-          <div class="dim">Free pieces you missed</div>
+          <div class="dim">Free pieces missed</div>
           <div class="tile-value">{freeLast === null ? '—' : one(freeLast)}</div>
           <div class="dim tile-sub">per game, last 10</div>
         </div>

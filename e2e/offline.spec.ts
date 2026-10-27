@@ -25,7 +25,7 @@ test('after the first visit the whole app works offline', async ({ page, context
   await page.goto(`/#/play/${encodeURIComponent('rnbqkbnr/ppp2ppp/3p4/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3')}`);
   await page.getByRole('button', { name: 'Start game' }).click();
   await playMove(page, 'f3g5');
-  await expect(page.getByRole('dialog', { name: 'Blunder alarm' })).toBeVisible({ timeout: 20_000 }); // engine works offline
+  await expect(page.getByRole('alertdialog', { name: 'Blunder alarm' })).toBeVisible({ timeout: 20_000 }); // engine works offline
   await page.getByRole('button', { name: 'Rethink' }).click();
   await playMove(page, 'b1c3');
   await expect(page.getByText('Your move')).toBeVisible({ timeout: 30_000 }); // Maia replied offline

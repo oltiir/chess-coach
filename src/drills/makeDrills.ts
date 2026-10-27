@@ -14,7 +14,7 @@ const shortDate = (t: number) => new Date(t).toLocaleDateString('en-GB', { day: 
 /** Every labelled mistake in an analysed game becomes a "find a better move" drill. */
 export function makeDrills(a: GameAnalysis, g: GameRecord): Drill[] {
   const source = g.url.startsWith('bot:') ? 'bot' : 'chesscom';
-  const context = source === 'bot' ? `practice game, ${shortDate(g.endTime)}` : `vs ${g.oppName}, ${shortDate(g.endTime)}`;
+  const context = source === 'bot' ? `Your practice game, ${shortDate(g.endTime)}` : `Your game vs ${g.oppName}, ${shortDate(g.endTime)}`;
   return a.plies
     .filter((p) => p.flag && p.label)
     .map((p) => ({

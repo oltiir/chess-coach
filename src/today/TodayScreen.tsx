@@ -107,8 +107,8 @@ export function TodayScreen({ drillId }: { drillId?: string }) {
     <div class="stack">
       <div class="card hero">
         <p class="dim" style="margin:0">Today’s session</p>
-        <h2 class="hero-title">{drillCount ? `${total} items` : `${total} themed puzzles`} · about 12 minutes</h2>
-        {drillCount > 0 && <p class="dim">{drillCount} from your own games, then themed puzzles.</p>}
+        <h2 class="hero-title">{drillCount ? `${total} items` : `${total} themed puzzles`}</h2>
+        <p class="dim">About 12 minutes{drillCount > 0 ? ` · ${drillCount} from your own games, then themed puzzles` : ''}</p>
         <button class="btn block" onClick={begin}>
           {doneCount > 0 ? `Continue (${doneCount}/${total})` : 'Start'}
         </button>

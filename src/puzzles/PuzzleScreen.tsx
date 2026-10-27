@@ -69,7 +69,7 @@ export function PuzzleScreen({ puzzleId }: { puzzleId?: string }) {
                 {s.label}
                 <small class="dim">{done ? 'Mastered' : open ? (acc !== undefined ? `${Math.round(acc * 100)}% first try` : 'Not started') : 'Locked'}</small>
               </span>
-              {open && <button class="btn secondary small" onClick={() => void start(s.key)}>Practise</button>}
+              {open && !(s.key === st.current && !done) && <button class="btn secondary small" onClick={() => void start(s.key)}>Practise</button>}
             </li>
           );
         })}

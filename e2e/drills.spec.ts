@@ -4,7 +4,7 @@ import type { Page } from '@playwright/test';
 const drill = {
   id: 'test-drill', fen: 'rnbqkbnr/ppp2ppp/3p4/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3', best: 'd2d4', played: 'f3g5',
   candidates: [{ uci: 'd2d4', wc: 0.2 }, { uci: 'f1c4', wc: 0.12 }, { uci: 'b1c3', wc: 0.05 }, { uci: 'f3g5', wc: -0.6 }],
-  label: 'hung-piece', explanation: 'Your knight on g5 was left undefended — Qxg5 wins it.', source: 'chesscom', createdAt: 1, context: 'vs kasparov99, 20 Oct',
+  label: 'hung-piece', explanation: 'Your knight on g5 was left undefended — Qxg5 wins it.', source: 'chesscom', createdAt: 1, context: 'Your game vs kasparov99, 20 Oct',
 };
 
 async function seed(page: Page) {

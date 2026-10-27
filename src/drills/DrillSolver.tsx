@@ -53,7 +53,7 @@ export function DrillSolver({ drill, onDone, onNext, aside, nextLabel = 'Next' }
     <div class="solver drill" data-drill-id={drill.id}>
       <div class="solver-head">
         <span class={`turn-dot ${color}`} aria-hidden="true" />
-        <span>Your game {drill.context}</span>
+        <span class="drill-context">{drill.context}</span>
         {aside && <span class="aside">{aside}</span>}
       </div>
       <Board fen={fen} orientation={color} movable={status === 'play' || status === 'retry'} onMove={(u) => void onMove(u)} nonce={nonce} arrows={arrows} />

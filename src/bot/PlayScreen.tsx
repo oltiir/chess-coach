@@ -174,27 +174,26 @@ function Game({ game, onChange }: { game: BotGame; onChange: (g: BotGame) => voi
         orientation={orientation}
         movable={myTurn && !pending && !checking}
         onMove={(u) => void onMove(u)}
-        lastMove={last ? [last.slice(0, 2), last.slice(2, 4)] : undefined}
+        lastMove={pending ? [pending.uci.slice(0, 2), pending.uci.slice(2, 4)] : last ? [last.slice(0, 2), last.slice(2, 4)] : undefined}
         nonce={nonce}
       />
       <div class="solver-foot">
-        <div class="row between">
-          <span class="dim">{game.alarm ? 'Blunder alarm on' : 'Test mode'}</span>
-          <button class="btn secondary small" onClick={() => onChange({ ...game, over: { result: 'loss', why: 'Resigned' } })}>Resign</button>
-        </div>
-      </div>
-      {pending && (
-        <div class="sheet-backdrop">
-          <div class="sheet" role="dialog" aria-label="Blunder alarm">
+        {pending ? (
+          <div class="card alarm" role="alertdialog" aria-label="Blunder alarm">
             <h2>Look again: what can they capture after this?</h2>
-            <p class="dim">Run the safety check before you commit.</p>
+            <p class="dim">You’re about to play {uciToSan(fen, pending.uci)}. Run the safety check first.</p>
             <div class="row">
               <button class="btn" style="flex:1" onClick={() => { setPending(null); setNonce((n) => n + 1); onChange({ ...game, alarms: game.alarms + 1 }); }}>Rethink</button>
               <button class="btn secondary" onClick={() => { const u = pending.uci; setPending(null); commit(u, game.alarms + 1); }}>Play it anyway</button>
             </div>
           </div>
-        </div>
-      )}
+        ) : (
+          <div class="row between">
+            <span class="dim">{game.alarm ? 'Blunder alarm on' : 'Test mode'}</span>
+            <button class="btn secondary small" onClick={() => onChange({ ...game, over: { result: 'loss', why: 'Resigned' } })}>Resign</button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -238,8 +237,8 @@ function Review({ game, onNew }: { game: BotGame; onNew: () => void }) {
           </button>
         </div>
       ))}
-      <button class="btn block" onClick={onNew}>New game</button>
       <SafetyCheckCard />
+      <button class="btn block" onClick={onNew}>New game</button>
     </div>
   );
 }

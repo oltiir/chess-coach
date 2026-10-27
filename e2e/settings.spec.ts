@@ -21,7 +21,7 @@ test('export a backup, re-import it (nothing new), import another device (new it
 
 test('changing the username saves it and syncs', async ({ page }) => {
   await page.goto('/#/settings');
-  const field = page.getByLabel('chess.com username');
+  const field = page.getByLabel('Username');
   await expect(field).toHaveValue('Oltii05');
   let asked = '';
   await page.route('https://api.chess.com/**', (r) => { asked = r.request().url(); return r.fulfill({ status: 404, body: '' }); });
@@ -29,7 +29,7 @@ test('changing the username saves it and syncs', async ({ page }) => {
   await page.getByRole('button', { name: 'Save' }).click();
   await expect.poll(() => asked).toContain('/player/someone_else/');
   await page.reload();
-  await expect(page.getByLabel('chess.com username')).toHaveValue('someone_else');
+  await expect(page.getByLabel('Username')).toHaveValue('someone_else');
 });
 
 test('storage status is shown', async ({ page }) => {

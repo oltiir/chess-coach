@@ -52,7 +52,7 @@ for (const scheme of ['light', 'dark'] as const) {
       await expect(page.getByText(/rapid games on chess.com/)).toBeVisible();
       await shot(page, 'progress-empty', p);
       await page.goto('/#/settings');
-      await expect(page.getByLabel('chess.com username')).toBeVisible();
+      await expect(page.getByLabel('Username')).toBeVisible();
       await shot(page, 'settings', p);
       await page.goto('/#/play');
       await expect(page.getByRole('button', { name: 'Start game' })).toBeVisible();
@@ -60,7 +60,7 @@ for (const scheme of ['light', 'dark'] as const) {
       await page.goto(`/#/play/${encodeURIComponent(HANG)}`);
       await page.getByRole('button', { name: 'Start game' }).click();
       await playMove(page, 'f3g5');
-      await expect(page.getByRole('dialog', { name: 'Blunder alarm' })).toBeVisible({ timeout: 20_000 });
+      await expect(page.getByRole('alertdialog', { name: 'Blunder alarm' })).toBeVisible({ timeout: 20_000 });
       await shot(page, 'play-alarm', p);
       await page.getByRole('button', { name: 'Play it anyway' }).click();
       await expect(page.getByText('Your move')).toBeVisible({ timeout: 30_000 });

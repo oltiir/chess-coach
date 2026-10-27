@@ -16,7 +16,9 @@ export function SyncBanner() {
   return (
     <div class="banner" role="status">
       <span>{MESSAGES[s.syncError]}</span>
-      <button class="btn ghost small" aria-label="Dismiss" onClick={() => setHidden(s.syncError!)}>✕</button>
+      <button class="btn ghost small icon-btn" aria-label="Dismiss" onClick={() => setHidden(s.syncError!)}>
+        <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 3l10 10M13 3L3 13" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" /></svg>
+      </button>
     </div>
   );
 }

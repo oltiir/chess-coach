@@ -6,7 +6,7 @@
 }
 .board { width: 100%; aspect-ratio: 1; overflow: clip; }
 /* Coordinates drawn inside the edge squares, in the opposite square colour so they stay readable. */
-.board coords { font-size: 11px; font-weight: 700; opacity: 1; font-family: var(--font); }
+.board coords { font-size: 11px; font-weight: 700; opacity: 1; font-family: var(--font); z-index: 3; pointer-events: none; }
 .board coords.ranks { left: 3px; top: 2px; width: auto; height: 100%; }
 .board coords.ranks coord { transform: none; }
 .board coords.files { left: 0; bottom: 1px; width: 100%; height: auto; text-transform: none; text-align: right; }
@@ -30,7 +30,7 @@ cg-board square.move-dest { background: radial-gradient(rgba(20, 40, 30, 0.35) 2
 cg-board square.oc.move-dest { background: radial-gradient(transparent 62%, rgba(20, 40, 30, 0.35) 64%); }
 cg-board square.last-move { background-color: var(--last-move, rgba(155, 199, 0, 0.38)); }
 cg-board square.selected { background-color: rgba(20, 85, 30, 0.45); }
-cg-board square.check { background: radial-gradient(ellipse at center, rgba(255, 0, 0, 1) 0%, rgba(231, 0, 0, 1) 25%, rgba(169, 0, 0, 0) 89%); }
+cg-board square.check { background: radial-gradient(ellipse at center, rgba(220, 80, 70, 0.9) 0%, rgba(200, 60, 50, 0.9) 25%, transparent 89%); }
 .promo {
   position: absolute; inset: 0; z-index: 5;
   display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; place-content: center;

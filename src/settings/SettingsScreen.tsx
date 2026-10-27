@@ -48,7 +48,7 @@ export function SettingsScreen() {
     <div class="stack settings">
       <section class="card stack">
         <h2>chess.com</h2>
-        <label class="field-label" for="username">chess.com username</label>
+        <label class="field-label" for="username">Username</label>
         <div class="row">
           <input id="username" class="input" value={name} autocomplete="off" autocapitalize="off" spellcheck={false}
             onInput={(e) => setName((e.target as HTMLInputElement).value)} />

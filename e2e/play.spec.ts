@@ -8,7 +8,7 @@ test('the alarm stops a hanging move, rethink restores, a safe move goes through
   await page.getByRole('button', { name: 'Start game' }).click();
   await expect(page.getByText('Your move')).toBeVisible();
   await playMove(page, 'f3g5');
-  const sheet = page.getByRole('dialog', { name: 'Blunder alarm' });
+  const sheet = page.getByRole('alertdialog', { name: 'Blunder alarm' });
   await expect(sheet.getByText('Look again: what can they capture after this?')).toBeVisible({ timeout: 20_000 });
   await sheet.getByRole('button', { name: 'Rethink' }).click();
   await expect(sheet).toHaveCount(0);
@@ -23,7 +23,7 @@ test('test mode plays the move without stopping, and resign shows a review', asy
   await page.getByRole('button', { name: 'Start game' }).click();
   await playMove(page, 'f3g5');
   await expect(page.getByText('Maia is thinking…')).toBeVisible({ timeout: 10_000 });
-  await expect(page.getByRole('dialog', { name: 'Blunder alarm' })).toHaveCount(0);
+  await expect(page.getByRole('alertdialog', { name: 'Blunder alarm' })).toHaveCount(0);
   await expect(page.getByText('Your move')).toBeVisible({ timeout: 30_000 });
   await page.getByRole('button', { name: 'Resign' }).click();
   await expect(page.getByText('You lost')).toBeVisible();

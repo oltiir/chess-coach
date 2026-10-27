@@ -24,7 +24,7 @@ describe('makeDrills', () => {
     const drills = makeDrills(a, g);
     expect(drills).toHaveLength(1);
     expect(drills[0]).toMatchObject({ id: `${g.url}#4`, played: 'f3g5', label: 'hung-piece', source: 'chesscom' });
-    expect(drills[0].context).toBe('vs kasparov99, 20 Oct');
+    expect(drills[0].context).toBe('Your game vs kasparov99, 20 Oct');
     expect(drills[0].explanation).toContain('knight on g5');
   }, 60_000);
 
