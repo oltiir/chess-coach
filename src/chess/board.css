@@ -1,0 +1,32 @@
+.board-wrap {
+  position: relative;
+  width: min(100%, calc(100dvh - 300px), 560px);
+  min-width: 260px;
+  margin: 0 auto;
+}
+.board { width: 100%; aspect-ratio: 1; }
+.board cg-container { position: absolute; }
+cg-board {
+  background-color: var(--sq-light);
+  background-image: conic-gradient(var(--sq-dark) 90deg, var(--sq-light) 90deg 180deg, var(--sq-dark) 180deg 270deg, var(--sq-light) 270deg);
+  background-size: 25% 25%;
+  border-radius: 6px;
+}
+:root { --sq-light: #ecdcb9; --sq-dark: #b58a62; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --sq-light: #c9b48f; --sq-dark: #8a6a4b; } }
+:root[data-theme="dark"] { --sq-light: #c9b48f; --sq-dark: #8a6a4b; }
+cg-board square.move-dest { background: radial-gradient(rgba(20, 40, 30, 0.35) 20%, transparent 22%); }
+cg-board square.oc.move-dest { background: radial-gradient(transparent 62%, rgba(20, 40, 30, 0.35) 64%); }
+cg-board square.last-move { background-color: rgba(155, 199, 0, 0.38); }
+cg-board square.selected { background-color: rgba(20, 85, 30, 0.45); }
+cg-board square.check { background: radial-gradient(ellipse at center, rgba(255, 0, 0, 1) 0%, rgba(231, 0, 0, 1) 25%, rgba(169, 0, 0, 0) 89%); }
+.promo {
+  position: absolute; inset: 0; z-index: 5;
+  display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; place-content: center;
+  padding: 18%; background: rgba(0, 0, 0, 0.55); border-radius: 6px;
+}
+.promo-piece {
+  aspect-ratio: 1; border: 0; border-radius: 50%; cursor: pointer;
+  background-color: var(--surface); background-size: 80%; background-repeat: no-repeat; background-position: center;
+}
+.promo .btn { grid-column: span 2; color: #fff; }

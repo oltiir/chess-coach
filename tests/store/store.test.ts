@@ -41,7 +41,7 @@ describe('export / import merge', () => {
 
   it('keeps the most advanced analysis per game', async () => {
     const db = await openDb();
-    const a = { url: 'g1', engine: 'sf19-lite', nodes: 1, plies: [], stats: { ownMoves: 0, hangs: 0, pawnHangs: 0, freeMissed: 0, clockUsedPct: null }, done: false, nextPly: 10 };
+    const a = { url: 'g1', engine: 'sf19-lite' as const, nodes: 1, plies: [], stats: { ownMoves: 0, hangs: 0, pawnHangs: 0, freeMissed: 0, clockUsedPct: null }, done: false, nextPly: 10 };
     await db.put('analyses', a);
     const f = await exportAll();
     await importMerge({ ...f, analyses: [{ ...a, nextPly: 4 }] });
