@@ -13,8 +13,8 @@ describe('filterRow', () => {
       themes: ['backRankMate', 'mate', 'mateIn1', 'short'],
     });
   });
-  it('rejects ratings outside 400-1400', () => {
-    expect(filterRow(row(1500, 75, 95, 500, 'fork'))).toBeNull();
+  it('rejects ratings outside 400-2000', () => {
+    expect(filterRow(row(2100, 75, 95, 500, 'fork'))).toBeNull();
     expect(filterRow(row(350, 75, 95, 500, 'fork'))).toBeNull();
   });
   it('rejects uncertain, unpopular or rarely played puzzles', () => {

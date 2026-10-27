@@ -5,13 +5,19 @@ import { writeFileSync, mkdirSync } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { pathToFileURL } from 'node:url';
 
-export const LADDER_THEMES = ['hangingPiece', 'mateIn1', 'fork', 'pin', 'skewer', 'backRankMate', 'mateIn2', 'discoveredAttack'];
-const TOTAL = 30_000;
+// Keep in sync with src/coach/groups.ts (groups → Lichess themes).
+const GROUPS = {
+  defence: ['defensiveMove'], free: ['hangingPiece'], pins: ['pin', 'skewer'], forks: ['fork'],
+  discovered: ['discoveredAttack', 'discoveredCheck'], mates: ['mateIn1', 'mateIn2', 'backRankMate'],
+  removal: ['deflection', 'attraction', 'capturingDefender'], trapped: ['trappedPiece'],
+};
+export const LADDER_THEMES = Object.values(GROUPS).flat();
+const TOTAL = 60_000;
 
 export function filterRow(c) {
   const [id, fen, moves, rating, rd, pop, plays, themes] = c;
   const r = +rating;
-  if (r < 400 || r > 1400 || +rd > 90 || +pop < 80 || +plays < 100) return null;
+  if (r < 400 || r > 2000 || +rd > 90 || +pop < 80 || +plays < 100) return null;
   const t = themes.split(' ');
   if (!t.some((x) => LADDER_THEMES.includes(x))) return null;
   return { id, fen, moves: moves.split(' '), rating: r, themes: t };
@@ -19,15 +25,15 @@ export function filterRow(c) {
 
 async function main() {
   const lines = createInterface({ input: process.stdin });
-  const byTheme = new Map(LADDER_THEMES.map((t) => [t, []]));
+  const byTheme = new Map(Object.keys(GROUPS).map((g) => [g, []]));
   let n = 0;
   for await (const line of lines) {
     if (n++ === 0) continue; // header
     const p = filterRow(line.split(','));
-    if (p) for (const t of p.themes) byTheme.get(t)?.push(p);
+    if (p) for (const [g, ts] of Object.entries(GROUPS)) if (ts.some((t) => p.themes.includes(t))) byTheme.get(g).push(p);
   }
   const picked = new Map();
-  const quota = Math.floor(TOTAL / LADDER_THEMES.length);
+  const quota = Math.floor(TOTAL / byTheme.size);
   // Rarest themes first so they get their full quota; leftovers go to the bigger themes.
   const order = [...byTheme.entries()].sort((a, b) => a[1].length - b[1].length);
   let carry = 0;

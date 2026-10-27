@@ -4,6 +4,8 @@ export interface Attempt {
   id: string; kind: ItemKind; itemId: string; ts: number;
   firstTry: boolean; solved: boolean; ms: number; device: string;
   theme?: string; rating?: number;
+  groups?: string[]; // coach groups the puzzle belongs to (rated attempts)
+  firstMoveMs?: number; // time to the first move: the fluency signal
 }
 
 export interface Puzzle { id: string; fen: string; moves: string[]; rating: number; themes: string[] }

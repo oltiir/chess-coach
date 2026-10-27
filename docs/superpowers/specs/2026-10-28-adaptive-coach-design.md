@@ -72,13 +72,13 @@ Research done by a Fable agent; sources are in the conversation.
 
    - Labels mapped to Defence also feed the two new drills (rule 7).
    - Before any games are analysed, use the measured profile above as the prior.
-6. **Repetition with a speed gate.**
-   - **Intervals:** missed items come back after 1, 3, 7 and 21 days.
-   - **First try and fast** (time to first move ≤ 10 s): advance one interval.
+6. **Repetition with a speed gate.** A missed item comes back after 1 day, then 3, then 7.
+   - **First try and fast** (time to first move ≤ 10 s): move to the next interval.
    - **First try but slow:** repeat the same interval.
    - **Miss:** back to 1 day.
-   - **Retire** after 2 consecutive fast first-try solves.
-   - This replaces the old rule, and the 7/21-day steps are now reachable.
+   - **Retire** after a fast first-try solve at the 7-day review, i.e. three fast first-try solves after the miss.
+   - **Implementation note:** I changed my first version, "retire after 2 in a row". It would have retired items at the 3-day step, so the longest gap would never have been tested.
+
 7. **Two new drills built for hanging pieces.** Both are generated from positions, with no engine needed:
    - **Threat scan.** Shows a position after the opponent's move, taken from his own games where available, otherwise from puzzle positions.
      - Task: "Tap every piece of yours they can win."

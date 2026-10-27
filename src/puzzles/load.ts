@@ -1,7 +1,7 @@
 import { kvGet, kvSet, openDb } from '../store/db';
 import type { Puzzle } from '../store/types';
 
-const VERSION = 1;
+const VERSION = 2; // 2: 60k puzzles in 8 coach groups, rated 400-2000
 const CHUNK = 400;
 
 export function parseTsv(text: string): Puzzle[] {
@@ -15,6 +15,7 @@ export function parseTsv(text: string): Puzzle[] {
 export async function ensurePuzzlesLoaded(): Promise<number> {
   const db = await openDb();
   if ((await kvGet<number>('puzzles-version')) === VERSION) return db.count('puzzles');
+  if ((await kvGet<number>('puzzles-version')) !== undefined) await db.clear('puzzles'); // replace an older set
   const lines = (await (await fetch(`${import.meta.env?.BASE_URL ?? '/'}data/puzzles.tsv`)).text()).trim().split('\n');
   // Import in small chunks, yielding between them, so the first launch never freezes the page.
   for (let i = 0; i < lines.length; i += CHUNK) {
