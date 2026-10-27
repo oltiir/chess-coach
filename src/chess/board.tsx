@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'preact/hooks';
+import { useEffect, useLayoutEffect, useRef, useState } from 'preact/hooks';
 import { Chessground } from '@lichess-org/chessground';
 import type { Api } from '@lichess-org/chessground/api';
 import type { DrawShape } from '@lichess-org/chessground/draw';
@@ -31,7 +31,7 @@ export function Board({ fen, orientation, movable, onMove, lastMove, arrows, hig
   const cb = useRef(onMove);
   cb.current = onMove;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     api.current = Chessground(el.current!, {
       animation: { duration: 180 },
       highlight: { lastMove: true, check: true },
@@ -41,7 +41,7 @@ export function Board({ fen, orientation, movable, onMove, lastMove, arrows, hig
     return () => api.current?.destroy();
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const c = new Chess(fen);
     const turn = c.turn() === 'w' ? 'white' : 'black';
     const shapes: DrawShape[] = (arrows ?? []).map((a) => ({ orig: a.from as Key, dest: a.to as Key, brush: brushes[a.color ?? 'green'] }));
