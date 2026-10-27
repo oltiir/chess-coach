@@ -9,7 +9,7 @@ export interface Attempt {
 export interface Puzzle { id: string; fen: string; moves: string[]; rating: number; themes: string[] }
 
 export interface GameRecord {
-  url: string; endTime: number; timeClass: 'rapid' | 'daily' | 'blitz' | 'bullet';
+  url: string; endTime: number; timeClass: 'rapid' | 'daily' | 'blitz' | 'bullet' | 'bot';
   timeControl: string; myColor: 'w' | 'b'; myRating: number; oppRating: number;
   oppName: string; result: 'win' | 'loss' | 'draw'; pgn: string;
 }

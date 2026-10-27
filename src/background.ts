@@ -15,8 +15,14 @@ const gameDoneHooks: ((a: GameAnalysis) => Promise<void>)[] = [];
 export const onGameAnalysed = (f: (a: GameAnalysis) => Promise<void>) => gameDoneHooks.push(f);
 
 let ctl: AbortController | null = null;
+let paused = false;
+
+/** Stop background analysis while the engine is needed for something interactive. */
+export function pauseAnalysis() { paused = true; ctl?.abort(); }
+export function resumeAnalysis() { paused = false; void analyse(); }
 
 async function analyse() {
+  if (paused) return;
   ctl?.abort();
   const c = (ctl = new AbortController());
   try {
