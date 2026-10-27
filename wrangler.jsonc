@@ -1,11 +1,22 @@
-// Static site on Cloudflare (Workers static assets). Only ./dist is uploaded.
+// Chess Coach on Cloudflare: static app from ./dist plus the crew API (/api/*) on the same origin.
 // Deploy: npm run deploy  (log in once with `npx wrangler login`; never put tokens in this repo)
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "chess-coach",
+  "main": "worker/index.ts",
   "compatibility_date": "2026-10-23",
   "assets": {
     "directory": "./dist",
-    "not_found_handling": "single-page-application"
-  }
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "chess-coach",
+      // filled in after `npx wrangler d1 create chess-coach`
+      "database_id": "00000000-0000-0000-0000-000000000000"
+    }
+  ]
 }

@@ -11,5 +11,5 @@
     "types": ["vite/client", "node"],
     "noEmit": true
   },
-  "include": ["src", "tests", "e2e"]
+  "include": ["src", "tests", "e2e", "worker"]
 }
