@@ -1,0 +1,123 @@
+import { useEffect, useState } from 'preact/hooks';
+import { puzzlesReady } from '../boot';
+import { PuzzleSolver, type PuzzleResult } from '../puzzles/PuzzleSolver';
+import { stepOf } from '../puzzles/select';
+import { allAttempts, logAttempt } from '../store/attempts';
+import { openDb } from '../store/db';
+import { getSettings } from '../store/exportImport';
+import { SafetyCheckCard } from '../ui/SafetyCheckCard';
+import { DrillSolver } from '../drills/DrillSolver';
+import { buildSession, daysTrainedThisWeek, markDone, type Session } from './session';
+
+type Mode = 'home' | 'running' | 'summary';
+
+export function TodayScreen() {
+  const [session, setSession] = useState<Session | null>(null);
+  const [days, setDays] = useState(0);
+  const [mode, setMode] = useState<Mode>('home');
+  const [results, setResults] = useState<Record<string, boolean>>({});
+  const [currentId, setCurrentId] = useState<string | null>(null);
+
+  const load = async () => {
+    await puzzlesReady;
+    const db = await openDb();
+    const attempts = await allAttempts();
+    const s = await buildSession(Date.now(), attempts, await db.getAll('drills'), db, (await getSettings()).puzzleSeed);
+    setSession(s);
+    setDays(daysTrainedThisWeek(attempts, Date.now()));
+  };
+  useEffect(() => { void load(); }, []);
+
+  if (!session) return <p class="dim">Getting today’s session ready…</p>;
+  const remaining = session.items.filter((i) => !session.doneIds.includes(i.id));
+  const total = session.items.length;
+  const doneCount = total - remaining.length;
+
+  const record = async (id: string, r: PuzzleResult) => {
+    const item = session.items.find((i) => i.id === id)!;
+    if (item.kind === 'puzzle')
+      await logAttempt({ kind: 'puzzle', itemId: item.puzzle.id, ts: Date.now(), ...r, theme: stepOf(item.puzzle), rating: item.puzzle.rating });
+    else await logAttempt({ kind: 'drill', itemId: item.drill.id, ts: Date.now(), ...r });
+    setResults((x) => ({ ...x, [id]: r.firstTry }));
+    await markDone(Date.now(), id); // finished items stay finished even if the app is closed now
+    setSession((s) => s && { ...s, doneIds: [...s.doneIds, id] });
+  };
+  const next = () => {
+    const nextItem = remaining.find((i) => i.id !== currentId);
+    if (nextItem) setCurrentId(nextItem.id);
+    else { setMode('summary'); void allAttempts().then((a) => setDays(daysTrainedThisWeek(a, Date.now()))); }
+  };
+  const begin = () => { setCurrentId(remaining[0]?.id ?? null); setMode('running'); };
+
+  const current = session.items.find((i) => i.id === currentId);
+  if (mode === 'running' && current) {
+    const item = current;
+    const position = session.items.indexOf(item) + 1;
+    return (
+      <div>
+        <div class="row between session-bar">
+          <button class="btn ghost small" onClick={() => setMode('home')}>Pause</button>
+          <span class="dim counter">{position} / {total}</span>
+        </div>
+        <div class="progress-track" aria-hidden="true"><span style={{ width: `${((position - 1) / total) * 100}%` }} /></div>
+        {item.kind === 'puzzle' ? (
+          <PuzzleSolver key={item.id} puzzle={item.puzzle} onDone={(r) => void record(item.id, r)} onNext={next} nextLabel={remaining.some((i) => i.id !== item.id) ? 'Next' : 'Finish'} />
+        ) : (
+          <DrillSolver key={item.id} drill={item.drill} onDone={(r) => void record(item.id, r)} onNext={next} />
+        )}
+      </div>
+    );
+  }
+
+  if (mode === 'summary' || (mode === 'home' && total > 0 && !remaining.length)) {
+    const vals = Object.values(results);
+    const missed = vals.filter((v) => !v).length;
+    return (
+      <div class="stack">
+        <div class="card">
+          <h2>Session done</h2>
+          {vals.length > 0 && <p>{vals.length - missed} solved first try · {missed} missed</p>}
+          <p class="dim">Back tomorrow: {missed} to try again, plus new ones.</p>
+        </div>
+        <WeekCard days={days} />
+        <ChessComCard />
+      </div>
+    );
+  }
+
+  return (
+    <div class="stack">
+      <div class="card hero">
+        <p class="dim" style="margin:0">Today’s session</p>
+        <h2 class="hero-title">{total} items · about 12 minutes</h2>
+        <p class="dim">{session.items.filter((i) => i.kind === 'drill').length} from your own games, the rest themed puzzles.</p>
+        <button class="btn block" onClick={begin}>
+          {doneCount > 0 ? `Continue (${doneCount}/${total})` : 'Start'}
+        </button>
+      </div>
+      <SafetyCheckCard />
+      <WeekCard days={days} />
+      <ChessComCard />
+    </div>
+  );
+}
+
+function WeekCard({ days }: { days: number }) {
+  return (
+    <div class="card row between">
+      <span>Days trained this week</span>
+      <span class="week-dots" aria-label={`${days} of 7`}>
+        {Array.from({ length: 7 }, (_, i) => <span key={i} class={i < days ? 'on' : ''} />)}
+      </span>
+    </div>
+  );
+}
+
+function ChessComCard() {
+  return (
+    <a class="card link-card" href="https://www.chess.com/play/online" target="_blank" rel="noopener">
+      <strong>Before you play on chess.com</strong>
+      <span class="dim">Play 15|10 rapid. Run the three questions before every move.</span>
+    </a>
+  );
+}

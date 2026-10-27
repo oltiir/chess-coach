@@ -16,6 +16,10 @@ export async function clickSquare(page: Page, sq: string) {
 export async function playMove(page: Page, uci: string) {
   await clickSquare(page, uci.slice(0, 2));
   await clickSquare(page, uci.slice(2, 4));
+  if (uci[4]) {
+    const name = { q: 'Queen', r: 'Rook', b: 'Bishop', n: 'Knight' }[uci[4]]!;
+    await page.getByRole('dialog', { name: 'Promote to' }).getByRole('button', { name }).click();
+  }
 }
 
 export const noVerticalScroll = (page: Page) =>

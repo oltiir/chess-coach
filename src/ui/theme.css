@@ -144,3 +144,15 @@ p { margin: 0 0 12px; }
 .ladder-step.done .ladder-mark { background: var(--accent); color: var(--accent-ink); }
 .ladder-label { flex: 1; display: flex; flex-direction: column; font-weight: 600; }
 .ladder-label small { font-weight: 400; font-size: 13px; }
+
+.hero-title { font-size: 22px; margin: 2px 0 6px; }
+.safety ol { margin: 0; padding-left: 20px; }
+.safety li { margin: 6px 0; }
+.week-dots { display: flex; gap: 6px; }
+.week-dots span { width: 12px; height: 12px; border-radius: 50%; background: var(--surface-2); border: 1px solid var(--line); }
+.week-dots span.on { background: var(--accent); border-color: var(--accent); }
+.link-card { display: flex; flex-direction: column; gap: 2px; text-decoration: none; color: var(--text); }
+.session-bar { margin-bottom: 6px; }
+.session-bar .counter { margin: 0; }
+.progress-track { height: 4px; border-radius: 4px; background: var(--surface-2); margin-bottom: 12px; overflow: hidden; }
+.progress-track span { display: block; height: 100%; background: var(--accent); transition: width 0.3s; }

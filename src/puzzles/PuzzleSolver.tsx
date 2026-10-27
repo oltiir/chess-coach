@@ -70,7 +70,7 @@ export function PuzzleSolver({ puzzle, onDone, onNext, nextLabel = 'Next' }: Pro
 
   const best = puzzle.moves[idx];
   return (
-    <div class="solver">
+    <div class="solver" data-puzzle-id={puzzle.id}>
       <div class="solver-head">
         <span class={`turn-dot ${player}`} aria-hidden="true" />
         <span>{player === 'white' ? 'White' : 'Black'} to move</span>
