@@ -7,11 +7,17 @@ import { openDb } from '../store/db';
 import { getSettings } from '../store/exportImport';
 import { SafetyCheckCard } from '../ui/SafetyCheckCard';
 import { DrillSolver } from '../drills/DrillSolver';
+import type { Drill } from '../store/types';
 import { buildSession, daysTrainedThisWeek, markDone, type Session } from './session';
 
 type Mode = 'home' | 'running' | 'summary';
 
-export function TodayScreen() {
+export function TodayScreen({ drillId }: { drillId?: string }) {
+  const [single, setSingle] = useState<Drill | null>(null);
+  useEffect(() => {
+    if (!drillId) { setSingle(null); return; }
+    void openDb().then(async (db) => setSingle((await db.get('drills', drillId)) ?? null));
+  }, [drillId]);
   const [session, setSession] = useState<Session | null>(null);
   const [days, setDays] = useState(0);
   const [mode, setMode] = useState<Mode>('home');
@@ -28,6 +34,15 @@ export function TodayScreen() {
   };
   useEffect(() => { void load(); }, []);
 
+  if (single)
+    return (
+      <DrillSolver
+        drill={single}
+        onDone={(r) => void logAttempt({ kind: 'drill', itemId: single.id, ts: Date.now(), ...r })}
+        onNext={() => { location.hash = '#/today'; }}
+        nextLabel="Done"
+      />
+    );
   if (!session) return <p class="dim">Getting today’s session ready…</p>;
   const remaining = session.items.filter((i) => !session.doneIds.includes(i.id));
   const total = session.items.length;
@@ -57,7 +72,7 @@ export function TodayScreen() {
     const aside = (
       <>
         <span class="dim counter">{position} / {total}</span>
-        <button class="btn ghost small" onClick={() => setMode('home')}>Pause</button>
+        <button class="btn secondary small" onClick={() => setMode('home')}>Pause</button>
       </>
     );
     return (
