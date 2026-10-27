@@ -12,9 +12,9 @@ export async function checkMove(fenBefore: string, uci: string, engine: EngineCl
   const after = play(fenBefore, uci);
   if (!after || after.isCheckmate()) return { alarm: false, reason: null };
   const [best] = await engine.analyse(fenBefore, { nodes: ALARM_NODES });
-  if (best.uci === uci) return { alarm: false, reason: null };
+  if (!best || best.uci === uci) return { alarm: false, reason: null };
   const wcBest = winningChances(best.score);
-  const wcAfter = new Chess(after.fen()).isDraw() ? 0 : winningChances(flip((await engine.analyse(after.fen(), { nodes: ALARM_NODES }))[0].score));
+  const wcAfter = new Chess(after.fen()).isDraw() ? 0 : winningChances(flip((await engine.analyse(after.fen(), { nodes: ALARM_NODES }))[0]?.score ?? best.score));
   const drop = wcBest - wcAfter;
   const hang = findHangs(after.fen());
   if (hang && hang.value >= 3 && drop > 0.1) return { alarm: true, reason: 'hang' };

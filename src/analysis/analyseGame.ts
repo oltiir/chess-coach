@@ -42,6 +42,9 @@ export async function analyseNextPly(g: GameRecord, a: GameAnalysis, engine: Eng
   const mv = moves[a.nextPly];
   const played = moveToUci(mv);
   const [bestLine] = await engine.analyse(mv.before, { nodes: a.nodes });
+  const own = ownPlies(g);
+  const next = own.find((i) => i > a.nextPly);
+  if (!bestLine) return { ...a, nextPly: next ?? a.nextPly + 1, done: next === undefined }; // engine had nothing to say; skip
   const bestScore = bestLine.score;
   const wcBest = winningChances(bestScore);
   let afterScore: Score;
@@ -50,7 +53,7 @@ export async function analyseNextPly(g: GameRecord, a: GameAnalysis, engine: Eng
     const c = new Chess(mv.after);
     if (c.isCheckmate()) afterScore = { mate: 1 };
     else if (c.isDraw() || c.isStalemate()) afterScore = { cp: 0 };
-    else afterScore = flip((await engine.analyse(mv.after, { nodes: a.nodes }))[0].score);
+    else afterScore = flip((await engine.analyse(mv.after, { nodes: a.nodes }))[0]?.score ?? bestScore);
   }
   const wcAfter = winningChances(afterScore);
   const drop = wcBest - wcAfter;
@@ -73,8 +76,6 @@ export async function analyseNextPly(g: GameRecord, a: GameAnalysis, engine: Eng
     p.candidates = lines.map((l) => ({ uci: l.uci, wc: winningChances(l.score) }));
     if (!p.candidates.some((c) => c.uci === played)) p.candidates.push({ uci: played, wc: wcAfter });
   }
-  const own = ownPlies(g);
-  const next = own.find((i) => i > a.nextPly);
   const out: GameAnalysis = { ...a, plies: [...a.plies, p], nextPly: next ?? a.nextPly + 1, done: next === undefined };
   out.stats = gameStats(out, g.pgn, g.myColor, own.length);
   return out;

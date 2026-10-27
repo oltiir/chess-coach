@@ -8,7 +8,7 @@ import { getSettings } from '../store/exportImport';
 import { SafetyCheckCard } from '../ui/SafetyCheckCard';
 import { DrillSolver } from '../drills/DrillSolver';
 import type { Drill } from '../store/types';
-import { buildSession, daysTrainedThisWeek, finishItem, type Session } from './session';
+import { buildSession, dayKey, daysTrainedThisWeek, finishItem, type Session } from './session';
 
 type Mode = 'home' | 'running' | 'summary';
 
@@ -31,6 +31,14 @@ export function TodayScreen({ drillId }: { drillId?: string }) {
     const s = await buildSession(Date.now(), attempts, await db.getAll('drills'), db, (await getSettings()).puzzleSeed);
     setSession(s);
     setDays(daysTrainedThisWeek(attempts, Date.now()));
+    // Rebuild the summary from saved answers so it survives a reload.
+    const today = dayKey(Date.now());
+    const first = new Map<string, boolean>();
+    for (const a of [...attempts].sort((x, y) => x.ts - y.ts))
+      if (dayKey(a.ts) === today && !first.has(a.itemId)) first.set(a.itemId, a.firstTry);
+    const res: Record<string, boolean> = {};
+    for (const id of s.doneIds) { const v = first.get(id.slice(2)); if (v !== undefined) res[id] = v; }
+    setResults(res);
   };
   useEffect(() => { void load(); }, []);
 

@@ -150,6 +150,7 @@ function Game({ game, onChange }: { game: BotGame; onChange: (g: BotGame | null)
     setLeft(game.clock.left);
     const t = setInterval(() => setLeft((s) => {
       if (s <= 1) { clearInterval(t); onChange({ ...gRef.current, over: { result: 'loss', why: 'Out of time' } }); return 0; }
+      void kvSet('bot-game', { ...gRef.current, clock: { ...gRef.current.clock!, left: s - 1 } }); // survives a reload mid-turn
       return s - 1;
     }), 1000);
     return () => clearInterval(t);
@@ -229,6 +230,7 @@ function Review({ game, onNew }: { game: BotGame; onNew: () => void }) {
   const [drills, setDrills] = useState<Drill[]>([]);
   const [sel, setSel] = useState(0);
   const [added, setAdded] = useState<Set<string>>(new Set());
+  const [failed, setFailed] = useState(false);
   const final = replay(game);
   useEffect(() => {
     void (async () => {
@@ -237,12 +239,22 @@ function Review({ game, onNew }: { game: BotGame; onNew: () => void }) {
         myRating: game.playerElo, oppRating: game.elo, oppName: `Maia ${game.elo}`, result: game.over!.result, pgn: final.pgn(),
       };
       const db = await openDb();
-      const a = { ...(await analyseGame(rec, getEngine(), 100_000)) };
-      a.stats = { ...a.stats, alarms: game.alarms };
-      await db.put('games', rec);
-      await db.put('analyses', a);
-      setAnalysis(a);
-      setDrills(makeDrills(a, rec));
+      try {
+        let a = await db.get('analyses', rec.url);
+        if (!a?.done) {
+          a = { ...(await analyseGame(rec, getEngine(), 100_000)) };
+          a.stats = { ...a.stats, alarms: game.alarms };
+          await db.put('games', rec);
+          await db.put('analyses', a);
+        }
+        const ds = makeDrills(a, rec);
+        const saved = new Set((await db.getAllKeys('drills')).map(String));
+        setAdded(new Set(ds.filter((d) => saved.has(d.id)).map((d) => d.id)));
+        setAnalysis(a);
+        setDrills(ds);
+      } catch {
+        setFailed(true);
+      }
     })();
   }, [game.id]);
 
@@ -264,7 +276,7 @@ function Review({ game, onNew }: { game: BotGame; onNew: () => void }) {
         arrows={d ? [{ from: d.played.slice(0, 2), to: d.played.slice(2, 4), color: 'red' }, { from: d.best.slice(0, 2), to: d.best.slice(2, 4), color: 'green' }] : undefined}
       />
       <div class="solver-foot">
-        {!analysis && <p class="dim">Reviewing your game…</p>}
+        {!analysis && <p class="dim">{failed ? 'Couldn’t review this game.' : 'Reviewing your game…'}</p>}
         {analysis && !drills.length && <p>No big mistakes found{analysis.stats.hangs === 0 ? ' and no hung pieces' : ''}. Nice and careful.</p>}
         {d && (
           <div class="moment-detail">

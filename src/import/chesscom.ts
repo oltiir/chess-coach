@@ -3,6 +3,9 @@ import type { GameRecord } from '../store/types';
 interface RawSide { username: string; rating: number; result: string }
 interface RawGame { url: string; end_time: number; time_class: string; time_control: string; pgn?: string; white: RawSide; black: RawSide }
 
+/** Odds/handicap games start from a custom position; they don't say anything about the player's normal play. */
+export const isStandard = (g: GameRecord) => !/\[SetUp "1"\]/.test(g.pgn);
+
 const DRAWS = new Set(['agreed', 'repetition', 'stalemate', 'insufficient', '50move', 'timevsinsufficient']);
 
 export function toGameRecord(raw: RawGame, username: string): GameRecord {

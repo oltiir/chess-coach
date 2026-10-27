@@ -28,11 +28,14 @@ export function Board({ fen, orientation, movable, onMove, lastMove, arrows, hig
   const el = useRef<HTMLDivElement>(null);
   const api = useRef<Api | null>(null);
   const [promo, setPromo] = useState<{ from: string; to: string } | null>(null);
+  const [reset, setReset] = useState(0); // re-applies the whole position (pieces, turn, legal moves)
   const cb = useRef(onMove);
   cb.current = onMove;
 
   useLayoutEffect(() => {
     api.current = Chessground(el.current!, {
+      fen, // start on the real position so pieces don't fly in from the opening setup
+      orientation,
       animation: { duration: 180 },
       highlight: { lastMove: true, check: true },
       draggable: { showGhost: true },
@@ -66,7 +69,7 @@ export function Board({ fen, orientation, movable, onMove, lastMove, arrows, hig
       },
       drawable: { enabled: false, autoShapes: shapes },
     });
-  }, [fen, orientation, movable, lastMove?.[0], lastMove?.[1], JSON.stringify(arrows), highlight, nonce]);
+  }, [fen, orientation, movable, lastMove?.[0], lastMove?.[1], JSON.stringify(arrows), highlight, nonce, reset]);
 
   const color = new Chess(fen).turn();
   return (
@@ -82,7 +85,7 @@ export function Board({ fen, orientation, movable, onMove, lastMove, arrows, hig
               onClick={() => { const m = promo; setPromo(null); cb.current?.(m.from + m.to + p); }}
             />
           ))}
-          <button class="btn ghost" onClick={() => { setPromo(null); api.current?.set({ fen }); }}>Cancel</button>
+          <button class="btn ghost" onClick={() => { setPromo(null); setReset((n) => n + 1); }}>Cancel</button>
         </div>
       )}
     </div>

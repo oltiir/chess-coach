@@ -18,9 +18,26 @@ export const dayKey = (t: number) => {
 /** Today's items: up to 3 drills (due first, then newest), due puzzle repeats, then new puzzles to 10. Stable for the day. */
 export async function buildSession(now: number, attempts: Attempt[], drills: Drill[], db: DB, seed: number): Promise<Session> {
   const date = dayKey(now);
+  const due = new Set(dueItems(attempts, now).map((d) => d.itemId));
   const saved = (await db.get('kv', `session-${date}`)) as { itemIds: string[]; doneIds: string[] } | undefined;
   const drillById = new Map(drills.map((d) => [d.id, d]));
   if (saved) {
+    // Drills found since the session was built join the unfinished part, replacing new puzzles from the end.
+    const tried = new Set(attempts.map((a) => a.itemId));
+    const haveDrills = saved.itemIds.filter((id) => id.startsWith('d:')).length;
+    const late = drills
+      .filter((d) => !tried.has(d.id) && !saved.itemIds.includes(`d:${d.id}`))
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .slice(0, Math.max(0, MAX_DRILLS - haveDrills))
+      .map((d) => `d:${d.id}`);
+    if (late.length) {
+      const done = saved.itemIds.filter((id) => saved.doneIds.includes(id));
+      const open = saved.itemIds.filter((id) => !saved.doneIds.includes(id));
+      const removable = open.filter((id) => id.startsWith('p:') && !due.has(id.slice(2))).reverse();
+      const drop = new Set(removable.slice(0, Math.max(0, done.length + late.length + open.length - SIZE)));
+      saved.itemIds = [...done, ...late, ...open.filter((id) => !drop.has(id))];
+      await db.put('kv', saved, `session-${date}`);
+    }
     const items: SessionItem[] = [];
     for (const id of saved.itemIds) {
       const key = id.slice(2);
@@ -35,13 +52,13 @@ export async function buildSession(now: number, attempts: Attempt[], drills: Dri
     return { date, items, doneIds: saved.doneIds };
   }
 
-  const due = dueItems(attempts, now);
+  const dueList = dueItems(attempts, now);
   const tried = new Set(attempts.map((a) => a.itemId));
-  const dueDrills = due.filter((d) => d.kind === 'drill').map((d) => drillById.get(d.itemId)).filter((d): d is Drill => !!d);
+  const dueDrills = dueList.filter((d) => d.kind === 'drill').map((d) => drillById.get(d.itemId)).filter((d): d is Drill => !!d);
   const newDrills = drills.filter((d) => !tried.has(d.id)).sort((a, b) => b.createdAt - a.createdAt);
   const items: SessionItem[] = [...dueDrills, ...newDrills].slice(0, MAX_DRILLS).map((d) => ({ id: `d:${d.id}`, kind: 'drill', drill: d }));
 
-  for (const d of due.filter((x) => x.kind === 'puzzle')) {
+  for (const d of dueList.filter((x) => x.kind === 'puzzle')) {
     if (items.length >= SIZE) break;
     const p = await db.get('puzzles', d.itemId);
     if (p) items.push({ id: `p:${p.id}`, kind: 'puzzle', puzzle: p });

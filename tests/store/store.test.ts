@@ -55,3 +55,10 @@ describe('export / import merge', () => {
     await expect(importMerge({ ...f, version: 9 as 1 })).rejects.toThrow('Unsupported backup version');
   });
 });
+
+describe('import validation', () => {
+  it('rejects files that are not a backup with a plain message', async () => {
+    await expect(importMerge({ version: 1 } as never)).rejects.toThrow('That file isn’t a Chess Coach backup.');
+    await expect(importMerge(null as never)).rejects.toThrow('That file isn’t a Chess Coach backup.');
+  });
+});

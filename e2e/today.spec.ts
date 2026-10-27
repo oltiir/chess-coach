@@ -40,3 +40,19 @@ test('a session survives a reload mid-way', async ({ page }) => {
   await page.getByRole('button', { name: 'Continue (2/10)' }).click({ timeout: 20_000 });
   await expect(page.getByText('3 / 10')).toBeVisible();
 });
+
+test('the summary is still right after closing and reopening the app', async ({ page }, info) => {
+  test.skip(info.project.name !== 'iphone');
+  test.setTimeout(120_000);
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Start' }).click({ timeout: 20_000 });
+  for (let i = 0; i < 10; i++) {
+    await expect(page.getByText('Find the best move.')).toBeVisible({ timeout: 20_000 });
+    if (i === 0) { await page.getByRole('button', { name: 'Pause' }).click(); await page.getByRole('button', { name: /^(Start|Continue)/ }).click(); }
+    await solveCurrent(page);
+    await page.getByRole('button', { name: i < 9 ? 'Next' : 'Finish' }).click();
+  }
+  await expect(page.getByText('10 solved first try · 0 missed')).toBeVisible();
+  await page.reload();
+  await expect(page.getByText('10 solved first try · 0 missed')).toBeVisible({ timeout: 20_000 });
+});

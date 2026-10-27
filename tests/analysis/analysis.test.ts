@@ -111,3 +111,13 @@ describe('runQueue', () => {
     expect((await db.get('analyses', 'g'))!.done).toBe(true);
   }, 60_000);
 });
+
+describe('runQueue and odds games', () => {
+  beforeEach(async () => { await closeDb(); globalThis.indexedDB = new IDBFactory(); });
+  it('skips games that start from a custom position', async () => {
+    const db = await openDb();
+    await db.put('games', game('1. e4 e5', { url: 'odds', pgn: '[SetUp "1"]\n[FEN "3qk3/8/8/8/8/8/PPPPPPPP/RNBQKBNR w KQ - 0 1"]\n\n1. e4' }));
+    await runQueue(new AbortController().signal, engine, { nodes: NODES });
+    expect(await db.get('analyses', 'odds')).toBeUndefined();
+  });
+});

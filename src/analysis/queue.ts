@@ -1,6 +1,7 @@
 import type { EngineClient } from '../engine/client';
 import { openDb } from '../store/db';
 import type { GameAnalysis } from '../store/types';
+import { isStandard } from '../import/chesscom';
 import { ANALYSIS_NODES, analyseNextPly, newAnalysis } from './analyseGame';
 
 interface Opts {
@@ -15,7 +16,7 @@ const hidden = () => typeof document !== 'undefined' && document.visibilityState
 export async function runQueue(signal: AbortSignal, engine: EngineClient, opts: Opts = {}) {
   const db = await openDb();
   const games = (await db.getAll('games'))
-    .filter((g) => g.timeClass === 'rapid' || g.timeClass === 'daily')
+    .filter((g) => (g.timeClass === 'rapid' || g.timeClass === 'daily') && isStandard(g))
     .sort((a, b) => b.endTime - a.endTime);
   const analyses = new Map((await db.getAll('analyses')).map((a) => [a.url, a]));
   const total = games.length;

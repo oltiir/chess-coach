@@ -80,3 +80,16 @@ describe('finishItem', () => {
     expect(await db.count('attempts')).toBe(1);
   });
 });
+
+describe('drills that arrive after today’s session was built', () => {
+  it('are added to the unfinished part of today’s session, keeping it at 10 items', async () => {
+    const db = await openDb();
+    const first = await buildSession(NOW, [], [], db, 700);
+    await markDone(NOW, first.items[0].id);
+    const later = await buildSession(NOW, [], [drill('d-late', 9)], db, 700);
+    expect(later.items).toHaveLength(10);
+    expect(later.items[0].id).toBe(first.items[0].id); // finished items stay
+    expect(later.items[1].id).toBe('d:d-late'); // the new drill comes next
+    expect(later.doneIds).toEqual([first.items[0].id]);
+  });
+});

@@ -5,7 +5,7 @@ import type { Puzzle } from '../store/types';
 import { reasonFor } from './reason';
 
 export interface PuzzleResult { solved: boolean; firstTry: boolean; ms: number }
-type Status = 'setup' | 'play' | 'retry' | 'revealed' | 'solved';
+type Status = 'setup' | 'play' | 'reply' | 'retry' | 'revealed' | 'solved';
 
 interface Props { puzzle: Puzzle; onDone: (r: PuzzleResult) => void; onNext?: () => void; nextLabel?: string; aside?: preact.ComponentChildren }
 
@@ -56,10 +56,11 @@ export function PuzzleSolver({ puzzle, onDone, onNext, nextLabel = 'Next', aside
         report({ solved: true, firstTry: wrong.current === 0, ms: Date.now() - start.current });
         return;
       }
-      setStatus('play');
+      setStatus('reply'); // not movable until the opponent's reply is on the board
       const reply = puzzle.moves[idx + 1];
       setTimeout(() => {
         setFen(play(after.fen(), reply)!.fen()); setLast([reply.slice(0, 2), reply.slice(2, 4)]); setIdx(idx + 2);
+        setStatus('play');
       }, 350);
       return;
     }
@@ -87,7 +88,7 @@ export function PuzzleSolver({ puzzle, onDone, onNext, nextLabel = 'Next', aside
       />
       <div class="solver-foot" aria-live="polite">
         {status === 'setup' && <p class="dim">Watch their move…</p>}
-        {status === 'play' && <p class="dim">Find the best move.</p>}
+        {(status === 'play' || status === 'reply') && <p class="dim">Find the best move.</p>}
         {status === 'retry' && (
           <div class="row between">
             <p class="msg bad">Not quite — try again</p>
@@ -101,7 +102,7 @@ export function PuzzleSolver({ puzzle, onDone, onNext, nextLabel = 'Next', aside
             </p>
             <p class="reason">{reason}</p>
             <div class="row">
-              <button class="btn secondary" onClick={() => { wrong.current = Math.max(wrong.current, 0); begin(); }}>Replay</button>
+              <button class="btn secondary" onClick={() => { wrong.current = 0; begin(); }}>Replay</button>
               {onNext && <button class="btn" style="flex:1" onClick={onNext}>{nextLabel}</button>}
             </div>
           </>

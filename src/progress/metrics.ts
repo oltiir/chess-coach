@@ -1,5 +1,6 @@
 import { dayKey, daysTrainedThisWeek } from '../today/session';
 import type { Attempt, GameAnalysis, GameRecord } from '../store/types';
+import { isStandard } from '../import/chesscom';
 
 export interface WeekPoint { week: string; avg: number; n: number }
 export interface Rate { rolling: number | null; prev: number | null; weekly: WeekPoint[] }
@@ -31,8 +32,8 @@ function rate(points: { t: number; v: number }[]): Rate {
 export function metrics(games: GameRecord[], analyses: GameAnalysis[], attempts: Attempt[], now: number): ProgressData {
   const byUrl = new Map(analyses.map((a) => [a.url, a]));
   const rapid = games.filter((g) => g.timeClass === 'rapid').sort((a, b) => a.endTime - b.endTime);
-  const analysable = games.filter((g) => g.timeClass === 'rapid' || g.timeClass === 'daily');
-  const done = rapid.filter((g) => byUrl.get(g.url)?.done).map((g) => ({ g, s: byUrl.get(g.url)!.stats }));
+  const analysable = games.filter((g) => (g.timeClass === 'rapid' || g.timeClass === 'daily') && isStandard(g));
+  const done = rapid.filter((g) => isStandard(g) && byUrl.get(g.url)?.done).map((g) => ({ g, s: byUrl.get(g.url)!.stats }));
   const series = (f: (s: GameAnalysis['stats']) => number) => done.map(({ g, s }) => ({ t: g.endTime, v: f(s) }));
 
   const themeAccuracy: ProgressData['themeAccuracy'] = {};

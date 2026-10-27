@@ -66,3 +66,12 @@ describe('metrics', () => {
     expect(m.daysTrainedThisWeek).toBe(2);
   });
 });
+
+describe('odds games', () => {
+  it('are left out of the pieces-hung stats', () => {
+    const odds = { ...game(MON + DAY), pgn: '[SetUp "1"]\n[FEN "3qk3/8/8/8/8/8/PPPPPPPP/RNBQKBNR w KQ - 0 1"]\n\n1. e4' };
+    const normal = game(MON + DAY);
+    const m = metrics([odds, normal], [analysis(odds.url, 9), analysis(normal.url, 1)], [], NOW);
+    expect(m.hangsPerGame.rolling).toBe(1);
+  });
+});

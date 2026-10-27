@@ -29,7 +29,10 @@ const further = (a: GameAnalysis, b: GameAnalysis) =>
 
 /** Merges a backup into this device. Never deletes or overwrites newer data. */
 export async function importMerge(f: ExportFile): Promise<{ added: number }> {
+  const lists = ['attempts', 'games', 'analyses', 'drills'] as const;
+  if (!f || typeof f !== 'object' || !('version' in f)) throw new Error('That file isn’t a Chess Coach backup.');
   if (f.version !== 1) throw new Error('Unsupported backup version');
+  if (lists.some((k) => !Array.isArray(f[k]))) throw new Error('That file isn’t a Chess Coach backup.');
   const db = await openDb();
   const tx = db.transaction(['attempts', 'games', 'analyses', 'drills'], 'readwrite');
   let added = 0;

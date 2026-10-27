@@ -11,7 +11,7 @@ const MESSAGES = {
 export function SyncBanner() {
   const [s, setS] = useState<BgStatus | null>(null);
   const [hidden, setHidden] = useState<string | null>(null);
-  useEffect(() => subscribe(setS), []);
+  useEffect(() => subscribe((x) => { if (x.syncing) setHidden(null); setS(x); }), []);
   if (!s?.syncError || hidden === s.syncError) return null;
   return (
     <div class="banner" role="status">
