@@ -30,7 +30,10 @@ export async function saveDrills(drills: Drill[]) {
 
 /** A move is good enough when it keeps within the mistake threshold of the best move. */
 export async function acceptMove(d: Drill, uci: string, engine: EngineClient): Promise<boolean> {
-  const best = Math.max(...d.candidates.map((c) => c.wc));
+  // Crew drills arrive without engine lines: score the best move first.
+  const best = d.candidates.length
+    ? Math.max(...d.candidates.map((c) => c.wc))
+    : winningChances((await engine.analyse(d.fen, { nodes: ANALYSIS_NODES / 2 }))[0]?.score ?? { cp: 0 });
   const known = d.candidates.find((c) => c.uci === uci);
   if (known) return best - known.wc < MISTAKE;
   const after = play(d.fen, uci);

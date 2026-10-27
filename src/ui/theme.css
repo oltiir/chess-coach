@@ -253,3 +253,40 @@ label.btn { cursor: pointer; }
 .link-more { color: var(--accent); font-weight: 600; font-size: 14px; margin-top: 6px; }
 .review-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
 .review-nav .pos { font-variant-numeric: tabular-nums; color: var(--text-dim); font-size: 14px; }
+
+/* Crew */
+.form-field { display: flex; flex-direction: column; gap: 6px; }
+.segmented.wide { display: flex; width: 100%; }
+.segmented.wide button { flex: 1; }
+.recovery-code { font: 700 22px ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.06em; text-align: center; padding: 14px; border-radius: 12px; background: var(--surface-2); }
+.code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.08em; color: var(--text); }
+.board-list { list-style: none; padding: 0; margin: 8px 0 0; }
+.board-list li { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+.board-list li:first-child { border-top: 0; }
+.board-list li.me .who strong::after { content: ' (you)'; font-weight: 400; color: var(--text-dim); }
+.board-list .rank { width: 20px; text-align: center; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.board-list .who { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.board-list .who strong, .feed-top { overflow-wrap: anywhere; }
+.board-list .who small { font-size: 13px; }
+.level { width: 40px; height: 40px; flex: none; border-radius: 12px; display: grid; place-items: center; font-weight: 800; font-size: 18px; background: var(--accent-soft); color: var(--accent); }
+.level.cal { background: var(--surface-2); color: var(--text-dim); }
+.quest { display: flex; flex-wrap: wrap; gap: 12px; }
+.quest-dot { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 56px; }
+.quest-dot > span { width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; font-weight: 700; color: var(--accent-ink); }
+.quest-dot.on > span { background: var(--accent); border-color: var(--accent); }
+.quest-dot small { font-size: 12px; color: var(--text-dim); max-width: 56px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+select.input { appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--text-dim) 50%), linear-gradient(135deg, var(--text-dim) 50%, transparent 50%); background-position: calc(100% - 18px) 50%, calc(100% - 13px) 50%; background-size: 5px 5px; background-repeat: no-repeat; width: 100%; }
+.recap-lines { list-style: none; padding: 0; margin: 10px 0 0; }
+.recap-lines li { display: flex; justify-content: space-between; gap: 8px; padding: 4px 0; }
+.recap-new { border-color: var(--accent); }
+.feed { list-style: none; padding: 0; margin: 8px 0 0; }
+.feed-item { display: flex; flex-direction: column; gap: 6px; text-decoration: none; color: var(--text); }
+.stat-line { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 14px; font-variant-numeric: tabular-nums; }
+.stat-line .bad { color: var(--bad); font-weight: 600; }
+.stat-line .good { color: var(--good); font-weight: 600; }
+.res.win { color: var(--good); } .res.loss { color: var(--bad); } .res.draw { color: var(--text-dim); }
+.crew-game .solver-head .btn { padding: 0 8px; }
+.notes { margin-top: 12px; }
+.note { background: var(--surface-2); border-radius: 10px; padding: 8px 12px; margin-bottom: 8px; font-size: 15px; }
+.notes form { margin-bottom: 8px; }
+@media (max-width: 400px) { .nav a { font-size: 11px; } }

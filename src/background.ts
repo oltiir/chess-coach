@@ -2,6 +2,7 @@ import { runQueue } from './analysis/queue';
 import { getEngine } from './engine/client';
 import { syncGames, type SyncError } from './import/sync';
 import { getSettings } from './store/exportImport';
+import { uploadPending } from './crew/api';
 import type { GameAnalysis } from './store/types';
 
 export interface BgStatus { syncError?: SyncError; syncing: boolean; analysed: { done: number; total: number } | null }
@@ -42,6 +43,7 @@ export async function syncAndAnalyse() {
     const r = await syncGames((await getSettings()).username);
     set({ syncing: false, syncError: r.error });
   } else set({ syncError: 'offline' });
+  void uploadPending();
   void analyse();
 }
 

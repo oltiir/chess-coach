@@ -41,7 +41,7 @@ export interface GameAnalysis {
 
 export interface Drill {
   id: string; fen: string; best: string; played: string; candidates: Candidate[];
-  label: MistakeLabel; explanation: string; source: 'chesscom' | 'bot'; createdAt: number;
+  label: MistakeLabel; explanation: string; source: 'chesscom' | 'bot' | 'crew'; createdAt: number;
   context: string;
 }
 
