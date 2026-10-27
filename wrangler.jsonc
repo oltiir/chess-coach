@@ -15,8 +15,7 @@
     {
       "binding": "DB",
       "database_name": "chess-coach",
-      // filled in after `npx wrangler d1 create chess-coach`
-      "database_id": "00000000-0000-0000-0000-000000000000"
+      "database_id": "72cf4964-4b88-4a5c-a831-22db980408e9"
     }
   ]
 }
