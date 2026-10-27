@@ -19,11 +19,12 @@ interface Props {
   lastMove?: [string, string];
   arrows?: Arrow[];
   highlight?: string; // square to mark, e.g. a hung piece
+  nonce?: number; // bump to force the board back to `fen` (e.g. after a rejected move)
 }
 
 const brushes = { green: 'green', red: 'red', blue: 'blue' } as const;
 
-export function Board({ fen, orientation, movable, onMove, lastMove, arrows, highlight }: Props) {
+export function Board({ fen, orientation, movable, onMove, lastMove, arrows, highlight, nonce }: Props) {
   const el = useRef<HTMLDivElement>(null);
   const api = useRef<Api | null>(null);
   const [promo, setPromo] = useState<{ from: string; to: string } | null>(null);
@@ -65,7 +66,7 @@ export function Board({ fen, orientation, movable, onMove, lastMove, arrows, hig
       },
       drawable: { enabled: false, autoShapes: shapes },
     });
-  }, [fen, orientation, movable, lastMove?.[0], lastMove?.[1], JSON.stringify(arrows), highlight]);
+  }, [fen, orientation, movable, lastMove?.[0], lastMove?.[1], JSON.stringify(arrows), highlight, nonce]);
 
   const color = new Chess(fen).turn();
   return (
