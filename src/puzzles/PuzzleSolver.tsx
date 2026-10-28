@@ -4,12 +4,13 @@ import { play, sideToMove } from '../chess/rules';
 import type { Puzzle } from '../store/types';
 import { reasonFor } from './reason';
 
-export interface PuzzleResult { solved: boolean; firstTry: boolean; ms: number }
+export type { PuzzleResult } from '../coach/coach';
+import type { PuzzleResult } from '../coach/coach';
 type Status = 'setup' | 'play' | 'reply' | 'retry' | 'revealed' | 'solved';
 
-interface Props { puzzle: Puzzle; onDone: (r: PuzzleResult) => void; onNext?: () => void; nextLabel?: string; aside?: preact.ComponentChildren }
+interface Props { puzzle: Puzzle; onDone: (r: PuzzleResult) => void; onNext?: () => void; nextLabel?: string; aside?: preact.ComponentChildren; hideReason?: boolean }
 
-export function PuzzleSolver({ puzzle, onDone, onNext, nextLabel = 'Next', aside }: Props) {
+export function PuzzleSolver({ puzzle, onDone, onNext, nextLabel = 'Next', aside, hideReason }: Props) {
   const [fen, setFen] = useState(puzzle.fen);
   const [idx, setIdx] = useState(0);
   const [status, setStatus] = useState<Status>('setup');
@@ -19,6 +20,7 @@ export function PuzzleSolver({ puzzle, onDone, onNext, nextLabel = 'Next', aside
   const wrong = useRef(0);
   const start = useRef(0);
   const reported = useRef(false);
+  const firstMove = useRef<number | undefined>(undefined);
   const player = sideToMove(puzzle.fen) === 'w' ? 'black' : 'white';
 
   const begin = () => {
@@ -31,9 +33,9 @@ export function PuzzleSolver({ puzzle, onDone, onNext, nextLabel = 'Next', aside
     return () => clearTimeout(t);
   };
 
-  useEffect(() => { wrong.current = 0; reported.current = false; return begin(); }, [puzzle.id]);
+  useEffect(() => { wrong.current = 0; reported.current = false; firstMove.current = undefined; return begin(); }, [puzzle.id]);
 
-  const report = (r: PuzzleResult) => { if (!reported.current) { reported.current = true; onDone(r); } };
+  const report = (r: PuzzleResult) => { if (!reported.current) { reported.current = true; onDone({ ...r, firstMoveMs: firstMove.current }); } };
 
   const reveal = () => {
     const best = puzzle.moves[idx];
@@ -44,6 +46,7 @@ export function PuzzleSolver({ puzzle, onDone, onNext, nextLabel = 'Next', aside
 
   const onMove = (uci: string) => {
     if (status !== 'play' && status !== 'retry') return;
+    firstMove.current ??= Date.now() - start.current;
     const expected = puzzle.moves[idx];
     const after = play(fen, uci);
     if (!after) return;
@@ -100,7 +103,7 @@ export function PuzzleSolver({ puzzle, onDone, onNext, nextLabel = 'Next', aside
             <p class={`msg ${status === 'solved' ? 'good' : ''}`}>
               {status === 'solved' ? (wrong.current === 0 ? 'Solved first try' : 'Solved') : 'Here’s the move'}
             </p>
-            <p class="reason">{reason}</p>
+            {!hideReason && <p class="reason">{reason}</p>}
             <div class="row">
               <button class="btn secondary" onClick={() => { wrong.current = 0; begin(); }}>Replay</button>
               {onNext && <button class="btn" style="flex:1" onClick={onNext}>{nextLabel}</button>}

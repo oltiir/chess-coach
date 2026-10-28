@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'preact/hooks';
 import { puzzlesReady } from '../boot';
 import { PuzzleSolver, type PuzzleResult } from '../puzzles/PuzzleSolver';
-import { stepOf } from '../puzzles/select';
 import { allAttempts, logAttempt } from '../store/attempts';
 import { openDb } from '../store/db';
-import { getSettings } from '../store/exportImport';
+import { groupsOf } from '../coach/groups';
+import { ThreatScan } from '../coach/ThreatScan';
+import { SafeOrNot } from '../coach/SafeOrNot';
+import { Placement } from '../coach/Placement';
+import { kvGet } from '../store/db';
 import { SafetyCheckCard } from '../ui/SafetyCheckCard';
 import { DrillSolver } from '../drills/DrillSolver';
 import type { Drill } from '../store/types';
@@ -23,12 +26,17 @@ export function TodayScreen({ drillId }: { drillId?: string }) {
   const [mode, setMode] = useState<Mode>('home');
   const [results, setResults] = useState<Record<string, boolean>>({});
   const [currentId, setCurrentId] = useState<string | null>(null);
+  const [placed, setPlaced] = useState<boolean | null>(null);
+  const [placing, setPlacing] = useState(false);
 
   const load = async () => {
     await puzzlesReady;
     const db = await openDb();
     const attempts = await allAttempts();
-    const s = await buildSession(Date.now(), attempts, await db.getAll('drills'), db, (await getSettings()).puzzleSeed);
+    const isPlaced = !!(await kvGet('placement'));
+    setPlaced(isPlaced);
+    if (!isPlaced) return;
+    const s = await buildSession(Date.now(), attempts, await db.getAll('drills'), db);
     setSession(s);
     setDays(daysTrainedThisWeek(attempts, Date.now()));
     // Rebuild the summary from saved answers so it survives a reload.
@@ -37,7 +45,7 @@ export function TodayScreen({ drillId }: { drillId?: string }) {
     for (const a of [...attempts].sort((x, y) => x.ts - y.ts))
       if (dayKey(a.ts) === today && !first.has(a.itemId)) first.set(a.itemId, a.firstTry);
     const res: Record<string, boolean> = {};
-    for (const id of s.doneIds) { const v = first.get(id.slice(2)); if (v !== undefined) res[id] = v; }
+    for (const id of s.doneIds) { const v = first.get(/^[ts]:/.test(id) ? id : id.slice(2)); if (v !== undefined) res[id] = v; }
     setResults(res);
   };
   useEffect(() => { void load(); }, []);
@@ -51,6 +59,19 @@ export function TodayScreen({ drillId }: { drillId?: string }) {
         nextLabel="Done"
       />
     );
+  if (placing) return <Placement onFinish={() => { setPlacing(false); void load(); }} />;
+  if (placed === false)
+    return (
+      <div class="stack">
+        <div class="card hero">
+          <p class="dim" style="margin:0">First, find your level</p>
+          <h2 class="hero-title">Placement test · 16 puzzles</h2>
+          <p class="dim">About 8 minutes. Themes are hidden, like in a real game. After this, every puzzle is chosen for your level and your weak spots — nothing too easy.</p>
+          <button class="btn block" onClick={() => setPlacing(true)}>Start placement</button>
+        </div>
+        <SafetyCheckCard />
+      </div>
+    );
   if (!session) return <p class="dim">Getting today’s session ready…</p>;
   const remaining = session.items.filter((i) => !session.doneIds.includes(i.id));
   const total = session.items.length;
@@ -59,9 +80,11 @@ export function TodayScreen({ drillId }: { drillId?: string }) {
 
   const record = async (id: string, r: PuzzleResult) => {
     const item = session.items.find((i) => i.id === id)!;
+    const base = { ts: Date.now(), ...r };
     const attempt = item.kind === 'puzzle'
-      ? { kind: 'puzzle' as const, itemId: item.puzzle.id, ts: Date.now(), ...r, theme: stepOf(item.puzzle), rating: item.puzzle.rating }
-      : { kind: 'drill' as const, itemId: item.drill.id, ts: Date.now(), ...r };
+      ? { ...base, kind: 'puzzle' as const, itemId: item.puzzle.id, rating: item.puzzle.rating, groups: groupsOf(item.puzzle.themes), theme: item.group }
+      : item.kind === 'drill' ? { ...base, kind: 'drill' as const, itemId: item.drill.id }
+      : { ...base, kind: item.kind === 'threat' ? 'scan' as const : 'safe' as const, itemId: item.id };
     setResults((x) => ({ ...x, [id]: r.firstTry }));
     await finishItem(Date.now(), id, attempt);
     setSession((s) => s && { ...s, doneIds: [...s.doneIds, id] });
@@ -88,8 +111,12 @@ export function TodayScreen({ drillId }: { drillId?: string }) {
         <div class="progress-track" aria-hidden="true"><span style={{ width: `${((position - 1) / total) * 100}%` }} /></div>
         {item.kind === 'puzzle' ? (
           <PuzzleSolver key={item.id} puzzle={item.puzzle} onDone={(r) => void record(item.id, r)} onNext={next} nextLabel={remaining.some((i) => i.id !== item.id) ? 'Next' : 'Finish'} aside={aside} />
-        ) : (
+        ) : item.kind === 'drill' ? (
           <DrillSolver key={item.id} drill={item.drill} onDone={(r) => void record(item.id, r)} onNext={next} aside={aside} />
+        ) : item.kind === 'threat' ? (
+          <ThreatScan key={item.id} fen={item.fen} answer={item.answer} onDone={(r) => void record(item.id, r)} onNext={next} aside={aside} />
+        ) : (
+          <SafeOrNot key={item.id} items={item.items} onDone={(r) => void record(item.id, r)} onNext={next} aside={aside} />
         )}
       </div>
     );
@@ -115,8 +142,9 @@ export function TodayScreen({ drillId }: { drillId?: string }) {
     <div class="stack">
       <div class="card hero">
         <p class="dim" style="margin:0">Today’s session</p>
-        <h2 class="hero-title">{drillCount ? `${total} items` : `${total} themed puzzles`}</h2>
-        <p class="dim">About 12 minutes{drillCount > 0 ? ` · ${drillCount} from your own games, then themed puzzles` : ''}</p>
+        <h2 class="hero-title">{total} items · about 15 minutes</h2>
+        <p class="plan-why">{session.why}</p>
+        <p class="dim small-print" style="margin-top:-6px">{drillCount ? `${drillCount} from your own games, ` : ''}a threat scan, a safe-or-not round, and puzzles at your level.</p>
         <button class="btn block" onClick={begin}>
           {doneCount > 0 ? `Continue (${doneCount}/${total})` : 'Start'}
         </button>

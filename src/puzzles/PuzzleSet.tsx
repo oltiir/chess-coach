@@ -1,24 +1,21 @@
 import { useState } from 'preact/hooks';
-import { logAttempt } from '../store/attempts';
+import { logPuzzle } from '../coach/coach';
 import type { Puzzle } from '../store/types';
 import { PuzzleSolver, type PuzzleResult } from './PuzzleSolver';
-import { stepOf } from './select';
 
-interface Props { puzzles: Puzzle[]; step?: string; onFinish: (results: PuzzleResult[]) => void }
+interface Props { puzzles: { puzzle: Puzzle; group: string }[]; onFinish: (results: PuzzleResult[]) => void }
 
-/** Runs a list of puzzles one after another and logs every attempt. */
-export function PuzzleSet({ puzzles, step, onFinish }: Props) {
+/** Runs a list of puzzles one after another and logs every rated attempt. */
+export function PuzzleSet({ puzzles, onFinish }: Props) {
   const [i, setI] = useState(0);
   const [results, setResults] = useState<PuzzleResult[]>([]);
-  const p = puzzles[i];
-  const done = (r: PuzzleResult) => {
-    setResults((rs) => [...rs, r]);
-    void logAttempt({ kind: 'puzzle', itemId: p.id, ts: Date.now(), firstTry: r.firstTry, solved: r.solved, ms: r.ms, theme: stepOf(p, step), rating: p.rating });
-  };
+  const { puzzle: p, group } = puzzles[i];
+  const done = (r: PuzzleResult) => { setResults((rs) => [...rs, r]); void logPuzzle(p, r, group); };
   const next = () => (i + 1 < puzzles.length ? setI(i + 1) : onFinish(results));
   return (
     <div>
-      <PuzzleSolver puzzle={p} onDone={done} onNext={next} nextLabel={i + 1 < puzzles.length ? 'Next' : 'Finish'} aside={<><span class="dim counter">{i + 1} / {puzzles.length}</span><button class="btn secondary small" onClick={() => onFinish(results)}>Stop</button></>} />
+      <PuzzleSolver key={p.id} puzzle={p} onDone={done} onNext={next} nextLabel={i + 1 < puzzles.length ? 'Next' : 'Finish'}
+        aside={<><span class="dim counter">{i + 1} / {puzzles.length}</span><button class="btn secondary small" onClick={() => onFinish(results)}>Stop</button></>} />
     </div>
   );
 }

@@ -29,7 +29,7 @@ async function person(browser: Browser) {
   await ctx.route('https://api.chess.com/**', (r) => r.abort());
   const page = await ctx.newPage();
   await page.goto('/');
-  await expect(page.getByRole('button', { name: 'Start' })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('button', { name: /^Start/ })).toBeVisible({ timeout: 20_000 });
   return page;
 }
 

@@ -16,7 +16,7 @@ for (const scheme of ['light', 'dark'] as const) {
       await ctx.route('https://api.chess.com/**', (r) => r.abort());
       const p = await ctx.newPage();
       await p.goto('/');
-      await expect(p.getByRole('button', { name: 'Start' })).toBeVisible({ timeout: 20_000 });
+      await expect(p.getByRole('button', { name: /^Start/ })).toBeVisible({ timeout: 20_000 });
       await p.evaluate(({ hangs, n, DAY, name }) => new Promise<void>((res) => {
         const r = indexedDB.open('chess-coach');
         r.onsuccess = () => {

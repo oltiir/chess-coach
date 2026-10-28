@@ -9,7 +9,7 @@ const drill = {
 
 async function seed(page: Page) {
   await page.goto('/');
-  await expect(page.getByRole('button', { name: 'Start' })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('button', { name: /^Start/ })).toBeVisible({ timeout: 20_000 });
   await page.evaluate((d) => new Promise<void>((res, rej) => {
     const r = indexedDB.open('chess-coach');
     r.onsuccess = () => { const tx = r.result.transaction('drills', 'readwrite'); tx.objectStore('drills').put(d); tx.oncomplete = () => { r.result.close(); res(); }; tx.onerror = rej; };

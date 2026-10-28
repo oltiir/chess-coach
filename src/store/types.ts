@@ -1,4 +1,4 @@
-export type ItemKind = 'puzzle' | 'drill';
+export type ItemKind = 'puzzle' | 'drill' | 'scan' | 'safe';
 
 export interface Attempt {
   id: string; kind: ItemKind; itemId: string; ts: number;

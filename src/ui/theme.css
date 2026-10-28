@@ -293,3 +293,22 @@ select.input { appearance: none; background-image: linear-gradient(45deg, transp
 .crew-note { background: var(--surface-2); border-radius: 10px; padding: 8px 12px; margin-bottom: 8px; font-size: 15px; }
 .notes form { margin-bottom: 8px; }
 @media (max-width: 400px) { .nav a span { letter-spacing: -0.01em; } }
+
+/* Coach drills */
+.timer { height: 6px; border-radius: 3px; background: var(--surface-2); overflow: hidden; margin-bottom: 10px; }
+.timer span { display: block; height: 100%; background: var(--accent); transition: width 0.1s linear; }
+.safe-or-not .bad { color: var(--bad); }
+.plan-why { font-size: 14px; margin: 6px 0 12px; }
+.group-row { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-top: 1px solid var(--line); }
+.group-row:first-of-type { border-top: 0; }
+.group-row .name { flex: 1; display: flex; flex-direction: column; font-weight: 600; }
+.group-row .name small { font-weight: 400; font-size: 13px; color: var(--text-dim); }
+.group-rating { font-variant-numeric: tabular-nums; font-weight: 700; min-width: 64px; text-align: right; }
+.group-rating small { display: block; font-weight: 400; font-size: 12px; color: var(--text-dim); }
+.placement-progress { font-variant-numeric: tabular-nums; }
+
+.goal { background: var(--accent-soft); border-radius: 12px; padding: 10px 12px; font-size: 14px; }
+.goal-result { margin: 0 0 10px; font-size: 15px; }
+.goal-result.good { color: var(--good); font-weight: 600; }
+.flag-note { background: var(--bad-soft); color: var(--text); border-radius: 10px; padding: 8px 12px; margin: 0 0 10px; font-size: 14px; }
+.quiz-intro { margin: 0 0 10px; font-size: 15px; }

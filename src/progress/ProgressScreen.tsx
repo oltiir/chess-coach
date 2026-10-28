@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'preact/hooks';
 import { subscribe } from '../background';
-import { LADDER } from '../puzzles/ladder';
+import { GROUPS } from '../coach/groups';
+import { coachState } from '../coach/coach';
+import type { Ratings } from '../coach/rating';
 import { allAttempts } from '../store/attempts';
 import { openDb } from '../store/db';
-import { Bar, LineChart } from './charts';
+import { LineChart } from './charts';
 import { metrics, type ProgressData, type WeekPoint } from './metrics';
 
 const one = (v: number) => v.toFixed(1);
@@ -14,10 +16,12 @@ const weekPoints = (ws: WeekPoint[], fmt: (v: number) => string) =>
 
 export function ProgressScreen() {
   const [m, setM] = useState<ProgressData | null>(null);
+  const [ratings, setRatings] = useState<Ratings | null>(null);
   const [doneCount, setDoneCount] = useState(-1);
   const load = async () => {
     const db = await openDb();
     setM(metrics(await db.getAll('games'), await db.getAll('analyses'), await allAttempts(), Date.now()));
+    setRatings((await coachState()).ratings);
   };
   useEffect(() => { void load(); }, [doneCount]);
   useEffect(() => subscribe((s) => { if (s.analysed && s.analysed.done !== doneCount) setDoneCount(s.analysed.done); }), [doneCount]);
@@ -88,13 +92,18 @@ export function ProgressScreen() {
         </section>
       )}
 
-      <section class="card">
-        <h2>Puzzle themes</h2>
-        {LADDER.map((s) => {
-          const a = m.themeAccuracy[s.key];
-          return <Bar key={s.key} label={s.label} value={a?.firstTryPct ?? 0} sub={a ? `${pct(a.firstTryPct)} first try · ${a.n}` : 'not started'} />;
-        })}
-      </section>
+      {ratings && (
+        <section class="card">
+          <div class="row between"><h2 style="margin:0">Puzzle rating</h2><span class="big-number small">{Math.round(ratings.global.r)}</span></div>
+          <p class="dim small-print" style="margin:4px 0 8px">{ratings.placed ? 'Updated after every puzzle. ± shows how sure the estimate is.' : 'Do the placement test on Today to set this.'}</p>
+          {GROUPS.map((g) => (
+            <div class="group-row" key={g.key}>
+              <span class="name">{g.label}</span>
+              <span class="group-rating">{Math.round(ratings.groups[g.key].r)}<small>±{Math.round(ratings.groups[g.key].rd * 2)}</small></span>
+            </div>
+          ))}
+        </section>
+      )}
 
       <div class="tiles">
         <div class="card tile">

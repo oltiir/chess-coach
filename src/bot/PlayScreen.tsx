@@ -1,6 +1,12 @@
 import { Chess } from 'chess.js';
 import { useEffect, useRef, useState } from 'preact/hooks';
-import { analyseGame } from '../analysis/analyseGame';
+import { analyseGame, netHang } from '../analysis/analyseGame';
+import { findHangs } from '../chess/material';
+import { PIECE_NAMES } from '../chess/names';
+import type { Square } from 'chess.js';
+import { nextStage, STAGE_LABELS, type StageState } from '../coach/stage';
+import { DrillSolver } from '../drills/DrillSolver';
+import { logAttempt } from '../store/attempts';
 import { pauseAnalysis, resumeAnalysis } from '../background';
 import { Board } from '../chess/board';
 import { play, uciToSan } from '../chess/rules';
@@ -15,6 +21,9 @@ import { getBot, warmBot } from './maia';
 interface BotGame {
   id: string; startFen: string; moves: string[]; color: 'w' | 'b'; elo: number; playerElo: number;
   alarm: boolean; clock: { left: number; inc: number } | null; alarms: number;
+  stage?: number; // 0 stop before, 1 flag after, 2 off (older games: from `alarm`)
+  flags?: number;
+  mode?: 'fix' | 'full' | 'position';
   over?: { result: 'win' | 'loss' | 'draw'; why: string };
   reviewing?: boolean;
 }
@@ -53,51 +62,82 @@ export function PlayScreen({ startFen }: { startFen?: string }) {
   return <Game game={game} onChange={save} />;
 }
 
+/** Positions just before one of his own hangs in real games: the most useful place to practise. */
+async function fixPositions(): Promise<string[]> {
+  const db = await openDb();
+  const games = new Map((await db.getAll('games')).map((g) => [g.url, g]));
+  return (await db.getAll('analyses'))
+    .filter((a) => a.done && !a.failed && games.get(a.url)?.timeClass === 'rapid')
+    .flatMap((a) => a.plies.filter((p) => p.hang || p.label === 'hung-piece').map((p) => p.fenBefore));
+}
+
+const effStage = (g: BotGame) => g.stage ?? (g.alarm ? 0 : 2);
+
 function Setup({ startFen, onStart }: { startFen?: string; onStart: (g: BotGame) => void }) {
   const [side, setSide] = useState<'random' | 'w' | 'b'>('random');
-  const [elo, setElo] = useState(600);
+  const [elo, setElo] = useState(700);
   const [playerElo, setPlayerElo] = useState(600);
-  const [alarm, setAlarm] = useState(true);
+  const [stage, setStage] = useState<'0' | '1' | '2'>('0');
   const [clock, setClock] = useState(false);
+  const [positions, setPositions] = useState<string[]>([]);
+  const [mode, setMode] = useState<'fix' | 'full'>('full');
   useEffect(() => {
     void (async () => {
       const s = await getSettings();
-      setAlarm(s.alarm);
+      const st = (await kvGet<StageState>('alarm-stage')) ?? { stage: s.alarm ? 0 : 2, good: 0 };
+      setStage(String(st.stage) as '0');
       const rapid = (await (await openDb()).getAll('games')).filter((g) => g.timeClass === 'rapid').sort((a, b) => b.endTime - a.endTime)[0];
       const mine = rapid ? roundTo50(rapid.myRating) : 600;
       setPlayerElo(mine);
-      setElo(Math.max(600, s.botElo ?? mine));
+      setElo(Math.max(600, s.botElo ?? mine + 100)); // a little stronger than you: stretch, not stroll
+      const fx = await fixPositions();
+      setPositions(fx);
+      if (fx.length && !startFen) setMode('fix');
     })();
   }, []);
-  const fixedSide = startFen ? (new Chess(startFen).turn() as 'w' | 'b') : null;
-  const start = () => onStart({
-    id: crypto.randomUUID(), startFen: startFen ?? START, moves: [],
-    color: fixedSide ?? (side === 'random' ? (Math.random() < 0.5 ? 'w' : 'b') : side),
-    elo, playerElo, alarm, clock: clock ? { left: 15 * 60, inc: 10 } : null, alarms: 0,
-  });
+  const fixedFen = startFen ?? (mode === 'fix' && positions.length ? positions[Math.floor(Math.random() * positions.length)] : null);
+  const start = () => {
+    const fen = fixedFen ?? START;
+    const color = fixedFen ? (new Chess(fen).turn() as 'w' | 'b') : side === 'random' ? (Math.random() < 0.5 ? 'w' : 'b') : side;
+    onStart({
+      id: crypto.randomUUID(), startFen: fen, moves: [], color, elo, playerElo, alarm: stage === '0', stage: +stage, flags: 0,
+      mode: startFen ? 'position' : mode, clock: clock ? { left: 15 * 60, inc: 10 } : null, alarms: 0,
+    });
+  };
   return (
     <div class="stack">
       <div class="card stack">
-        <h2>New practice game</h2>
-        {!fixedSide && (
+        <h2>Training game</h2>
+        {!startFen && (
+          <Segmented value={mode} onChange={setMode} options={[['fix', 'Fix a mistake'], ['full', 'Full game']]} />
+        )}
+        <p class="dim small-print" style="margin:0">
+          {startFen ? 'Play on from this position.'
+            : mode === 'fix' ? (positions.length ? `Starts just before one of your own blunders (${positions.length} to choose from). Play it out properly this time.` : 'No analysed blunders yet — sync your chess.com games first. Until then, play a full game.')
+            : 'A full game from the start.'}
+        </p>
+        {mode === 'full' && !startFen && (
           <Field label="You play">
             <Segmented value={side} onChange={setSide} options={[['random', 'Random'], ['w', 'White'], ['b', 'Black']]} />
           </Field>
         )}
-        <Field label="Bot strength">
+        <Field label="Bot strength" hint={`Your rating ${playerElo} + 100: a stretch`}>
           <div class="stepper">
             <button class="btn secondary small" aria-label="Weaker" onClick={() => setElo(Math.max(600, elo - 50))}>−</button>
             <span class="stepper-value">{elo}</span>
             <button class="btn secondary small" aria-label="Stronger" onClick={() => setElo(Math.min(2000, elo + 50))}>+</button>
           </div>
         </Field>
-        <Field label="Blunder alarm" hint={alarm ? 'Stops you before you hang a piece' : 'Test mode: no help'}>
-          <Toggle checked={alarm} onChange={setAlarm} label="Blunder alarm" />
-        </Field>
+        <div class="form-field">
+          <span class="field-label">Coach</span>
+          <Segmented value={stage} onChange={setStage} options={[['0', 'Stop me'], ['1', 'Flag after'], ['2', 'Off']]} />
+          <small class="dim">{STAGE_LABELS[+stage]}. Steps back on its own after 2 clean games in a row.</small>
+        </div>
         <Field label="Clock" hint={clock ? '15 minutes + 10 seconds a move' : 'No clock'}>
           <Toggle checked={clock} onChange={setClock} label="15|10 clock" />
         </Field>
-        <button class="btn block" onClick={start}>Start game</button>
+        <div class="goal"><strong>Goal:</strong> no pieces hung, at most 1 alarm. Before every move: what can they take?</div>
+        <button class="btn block" disabled={mode === 'fix' && !positions.length && !startFen} onClick={start}>Start game</button>
       </div>
       <p class="dim small-print">The bot is Maia, trained on real human games, so it plays and blunders like a person of that rating.</p>
     </div>
@@ -161,9 +201,24 @@ function Game({ game, onChange }: { game: BotGame; onChange: (g: BotGame | null)
     return () => clearInterval(t);
   }, [myTurn, game.moves.length]);
 
+  const [flag, setFlag] = useState<{ square: string; piece: string } | null>(null);
   const onMove = async (uci: string) => {
     if (!myTurn || checking || pending) return;
-    if (!game.alarm) return commit(uci);
+    setFlag(null);
+    const stage = effStage(game);
+    if (stage === 2) return commit(uci);
+    if (stage === 1) {
+      // Flag after: the move stands; if it hung something, mark it (no answer shown).
+      commit(uci);
+      const r = await checkMove(fen, uci, getEngine()).catch(() => ({ alarm: false }));
+      if (r.alarm) {
+        const after = play(fen, uci)!;
+        const h = netHang(after.history({ verbose: true }).at(-1)!, findHangs(after.fen()));
+        if (h) setFlag({ square: h.square, piece: PIECE_NAMES[after.get(h.square as Square)!.type] });
+        onChange({ ...gRef.current, flags: (gRef.current.flags ?? 0) + 1 });
+      }
+      return;
+    }
     // Keep the piece where the player put it while the coach checks the move.
     setPending({ uci, fen: play(fen, uci)!.fen(), alarm: false });
     setChecking(true);
@@ -193,12 +248,16 @@ function Game({ game, onChange }: { game: BotGame; onChange: (g: BotGame | null)
         onMove={(u) => void onMove(u)}
         lastMove={pending ? [pending.uci.slice(0, 2), pending.uci.slice(2, 4)] : last ? [last.slice(0, 2), last.slice(2, 4)] : undefined}
         nonce={nonce}
+        highlight={flag?.square}
       />
       <div class="solver-foot">
+        {flag && !over && (
+          <p class="flag-note" role="status">That left your {flag.piece} on {flag.square} loose (red). Keep playing — you’ll review it after the game.</p>
+        )}
         {over ? (
           <div class={`card result ${over.result}`} role="status" aria-label="Game result">
             <h2>{resultTitle(over)}</h2>
-            <p class="dim">vs Maia {game.elo}{game.alarm ? ` · the alarm stopped you ${game.alarms}×` : ''}</p>
+            <p class="dim">vs Maia {game.elo}{game.alarms ? ` · the coach stopped you ${game.alarms}×` : ''}{game.flags ? ` · flagged ${game.flags}×` : ''}</p>
             <div class="row">
               <button class="btn" style="flex:1" onClick={() => onChange({ ...game, reviewing: true })}>Review game</button>
               <button class="btn secondary" onClick={() => onChange(null)}>New game</button>
@@ -220,7 +279,7 @@ function Game({ game, onChange }: { game: BotGame; onChange: (g: BotGame | null)
           </div>
         ) : (
           <div class="row between">
-            <span class="dim">{game.alarm ? 'Blunder alarm on' : 'Test mode'}</span>
+            <span class="dim">Coach: {['stops you', 'flags after', 'off'][effStage(game)]}</span>
             <button class="btn secondary small" onClick={() => onChange({ ...game, over: { result: 'loss', why: 'Resigned' } })}>Resign</button>
           </div>
         )}
@@ -242,6 +301,9 @@ function Review({ game, onNew }: { game: BotGame; onNew: () => void }) {
   const [added, setAdded] = useState<Set<string>>(new Set());
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  const [quiz, setQuiz] = useState<Drill[]>([]);
+  const [quizAt, setQuizAt] = useState(0);
+  const [stageNote, setStageNote] = useState('');
   const final = replay(game);
   useEffect(() => {
     void (async () => {
@@ -259,6 +321,18 @@ function Review({ game, onNew }: { game: BotGame; onNew: () => void }) {
           await db.put('analyses', a);
         }
         const ds = makeDrills(a, rec);
+        // The 3 costliest moments become a "find it yourself" quiz before any answer is shown.
+        const drop = new Map(a.plies.map((p) => [`${rec.url}#${p.ply}`, p.drop]));
+        setQuiz([...ds].sort((x, y) => (drop.get(y.id) ?? 0) - (drop.get(x.id) ?? 0)).slice(0, 3));
+        await saveDrills(ds);
+        // Fade or restore the coach based on this game (once per game).
+        if (!(await kvGet(`stage-applied:${game.id}`))) {
+          const before = (await kvGet<StageState>('alarm-stage')) ?? { stage: effStage(game), good: 0 };
+          const after = nextStage({ ...before, stage: effStage(game) }, { hangs: a.stats.hangs, helps: game.alarms + (game.flags ?? 0) });
+          await kvSet('alarm-stage', after);
+          await kvSet(`stage-applied:${game.id}`, true);
+          if (after.stage !== effStage(game)) setStageNote(after.stage > effStage(game) ? `Clean play — the coach steps back: next game it will ${['stop you', 'only flag after you move', 'stay quiet'][after.stage]}.` : 'Too many hung pieces — the coach will step in more again next game.');
+        }
         const saved = new Set((await db.getAllKeys('drills')).map(String));
         setAdded(new Set(ds.filter((d) => saved.has(d.id)).map((d) => d.id)));
         setAnalysis(a);
@@ -285,6 +359,21 @@ function Review({ game, onNew }: { game: BotGame; onNew: () => void }) {
   const go = (n: number) => setPly(Math.max(0, Math.min(total, n)));
   const moveNo = (fen: string) => fen.split(' ')[5];
   const orientation = game.color === 'w' ? 'white' : 'black';
+  if (quiz.length && quizAt < quiz.length) {
+    const q = quiz[quizAt];
+    return (
+      <div>
+        <p class="quiz-intro"><strong>Before the answers:</strong> your {quiz.length === 1 ? 'costliest move' : `${quiz.length} costliest moves`}. Find a better one yourself — that’s what makes it stick.
+          <button class="btn ghost small" onClick={() => setQuizAt(quiz.length)}>Skip to answers</button></p>
+        <DrillSolver key={q.id} drill={q} nextLabel={quizAt + 1 < quiz.length ? 'Next moment' : 'See the full review'}
+          onDone={(r) => void logAttempt({ kind: 'drill', itemId: q.id, ts: Date.now(), ...r })}
+          onNext={() => setQuizAt(quizAt + 1)}
+          aside={<span class="dim counter">{quizAt + 1} / {quiz.length}</span>} />
+      </div>
+    );
+  }
+  const hangs = analysis?.stats.hangs ?? 0;
+  const helps = game.alarms + (game.flags ?? 0);
   return (
     <div class="solver review">
       <div class="solver-head">
@@ -299,6 +388,12 @@ function Review({ game, onNew }: { game: BotGame; onNew: () => void }) {
         arrows={d ? [{ from: d.played.slice(0, 2), to: d.played.slice(2, 4), color: 'red' }, { from: d.best.slice(0, 2), to: d.best.slice(2, 4), color: 'green' }] : undefined}
       />
       <div class="solver-foot">
+        {analysis && (
+          <p class={`goal-result ${hangs === 0 && helps <= 1 ? 'good' : ''}`}>
+            {hangs === 0 && helps <= 1 ? 'Goal met: no pieces hung.' : `Goal missed: ${hangs} hung piece${hangs === 1 ? '' : 's'}${helps > 1 ? `, coach needed ${helps}×` : ''}.`}
+            {stageNote && <span class="dim"> {stageNote}</span>}
+          </p>
+        )}
         <div class="review-nav">
           <button class="btn secondary small" aria-label="Previous move" disabled={at <= 0} onClick={() => go(at - 1)}>‹</button>
           <span class="pos">{d ? `Before move ${moveNo(d.fen)}` : at === 0 ? 'Start position' : `Move ${at} of ${total}`}</span>

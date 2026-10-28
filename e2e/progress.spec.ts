@@ -4,7 +4,7 @@ import type { Page } from '@playwright/test';
 const DAY = 86_400_000;
 async function seed(page: Page, blitz: number) {
   await page.goto('/');
-  await expect(page.getByRole('button', { name: 'Start' })).toBeVisible({ timeout: 20_000 });
+  await expect(page.getByRole('button', { name: /^Start/ })).toBeVisible({ timeout: 20_000 });
   await page.evaluate(({ blitz, DAY }) => new Promise<void>((res) => {
     const r = indexedDB.open('chess-coach');
     r.onsuccess = () => {
@@ -30,7 +30,7 @@ test('headline shows pieces hung per game with a downward trend', async ({ page 
   await expect(hero.locator('.big-number')).toContainText('1.0');
   await expect(hero.locator('.trend.good')).toHaveText('↓ from 2.0');
   await expect(page.getByRole('heading', { name: 'Rapid rating' })).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Puzzle themes' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Puzzle rating' })).toBeVisible();
   await expect(page.getByText(/blitz games this week/)).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth === innerWidth)).toBe(true);
 });

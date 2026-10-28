@@ -1,4 +1,4 @@
-import { expect, noVerticalScroll, playMove, test } from './helpers';
+import { expect, noVerticalScroll, playMove, skipQuiz, test } from './helpers';
 
 const HANG = 'rnbqkbnr/ppp2ppp/3p4/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3';
 const url = (fen: string) => `/#/play/${encodeURIComponent(fen)}`;
@@ -19,7 +19,7 @@ test('the alarm stops a hanging move, rethink restores, a safe move goes through
 
 test('test mode plays the move without stopping, and resign shows a review', async ({ page }) => {
   await page.goto(url(HANG));
-  await page.getByRole('switch', { name: 'Blunder alarm' }).click();
+  await page.getByRole('radio', { name: 'Off' }).click();
   await page.getByRole('button', { name: 'Start game' }).click();
   await playMove(page, 'f3g5');
   await expect(page.getByText('Maia is thinking…')).toBeVisible({ timeout: 10_000 });
@@ -28,7 +28,8 @@ test('test mode plays the move without stopping, and resign shows a review', asy
   await page.getByRole('button', { name: 'Resign' }).click();
   await expect(page.getByText('You resigned')).toBeVisible();
   await page.getByRole('button', { name: 'Review game' }).click();
-  await expect(page.getByRole('button', { name: 'Practise this' }).first()).toBeVisible({ timeout: 60_000 });
+  await skipQuiz(page);
+  await expect(page.getByRole('button', { name: 'Added to Today' }).first()).toBeVisible({ timeout: 60_000 });
 });
 
 test('black-to-move positions are shown from black’s side and fit a small phone', async ({ page }, info) => {

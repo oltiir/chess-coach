@@ -1,4 +1,5 @@
-import { expect, playMove, test } from './helpers';
+import { expect, playMove, seedPlacement, skipQuiz, test } from './helpers';
+import { MATE, PROMO } from './puzzle-data';
 
 // Captures every screen for design review: npx playwright test e2e/screens.spec.ts
 const round = process.env.REVIEW_ROUND ?? 'latest';
@@ -32,20 +33,27 @@ for (const scheme of ['light', 'dark'] as const) {
       test.setTimeout(240_000);
       const p = info.project.name;
       await page.goto('/');
+      await expect(page.getByRole('button', { name: /^Start/ })).toBeVisible({ timeout: 20_000 });
+      await shot(page, 'today-placement', p);
+      await page.getByRole('button', { name: 'Start placement' }).click();
+      await expect(page.getByText('Find the best move.')).toBeVisible({ timeout: 20_000 });
+      await shot(page, 'placement', p);
+      await seedPlacement(page);
+      await page.goto('/');
       await expect(page.getByRole('button', { name: 'Start' })).toBeVisible({ timeout: 20_000 });
       await shot(page, 'today', p);
       await page.getByRole('button', { name: 'Start' }).click();
       await expect(page.getByText('Find the best move.')).toBeVisible({ timeout: 20_000 });
       await shot(page, 'today-running', p);
       await page.goto('/#/puzzles');
-      await expect(page.locator('.ladder')).toBeVisible({ timeout: 20_000 });
+      await expect(page.locator('.group-row').first()).toBeVisible({ timeout: 20_000 });
       await shot(page, 'puzzles', p);
-      await page.goto('/#/puzzle/00rTX');
+      await page.goto(`/#/puzzle/${MATE.id}`);
       await expect(page.getByText('Find the best move.')).toBeVisible({ timeout: 20_000 });
-      await playMove(page, 'h4h5');
+      await playMove(page, MATE.wrong[0]);
       await expect(page.getByText('Not quite — try again')).toBeVisible();
       await shot(page, 'puzzle-retry', p);
-      await playMove(page, 'h4h6');
+      await playMove(page, MATE.wrong[1]);
       await expect(page.getByText(/Checkmate/)).toBeVisible();
       await shot(page, 'puzzle-reveal', p);
       await page.goto('/#/progress');
@@ -69,9 +77,11 @@ for (const scheme of ['light', 'dark'] as const) {
       await expect(page.getByRole('status', { name: 'Game result' })).toBeVisible();
       await shot(page, 'play-over', p);
       await page.getByRole('button', { name: 'Review game' }).click();
-      await expect(page.getByRole('button', { name: 'Practise this' }).first()).toBeVisible({ timeout: 60_000 });
+      await expect(page.getByText('Before the answers:')).toBeVisible({ timeout: 60_000 });
+      await shot(page, 'play-quiz', p);
+      await skipQuiz(page);
+      await expect(page.getByRole('button', { name: 'Added to Today' }).first()).toBeVisible({ timeout: 60_000 });
       await shot(page, 'play-review', p);
-      await page.getByRole('button', { name: 'Practise this' }).first().click();
       const drillId = await page.evaluate(() => new Promise<string>((res) => {
         const r = indexedDB.open('chess-coach');
         r.onsuccess = () => { const q = r.result.transaction('drills').objectStore('drills').getAllKeys(); q.onsuccess = () => res(String(q.result[0] ?? '')); };

@@ -1,8 +1,9 @@
 import { test, expect } from './helpers';
+import { MATE, PROMO } from './puzzle-data';
 import { readFileSync } from 'node:fs';
 
 test('export a backup, re-import it (nothing new), import another device (new items)', async ({ page }) => {
-  await page.goto('/#/puzzle/00rTX');
+  await page.goto(`/#/puzzle/${MATE.id}`);
   await expect(page.getByText('Find the best move.')).toBeVisible({ timeout: 20_000 });
   await page.goto('/#/settings');
   const download = page.waitForEvent('download');

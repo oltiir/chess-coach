@@ -20,17 +20,21 @@ interface Props {
   arrows?: Arrow[];
   highlight?: string; // square to mark, e.g. a hung piece
   nonce?: number; // bump to force the board back to `fen` (e.g. after a rejected move)
+  marks?: { square: string; color: 'green' | 'red' | 'blue' }[]; // circled squares
+  onSquare?: (square: string) => void; // tap on a square when the board isn't movable
 }
 
 const brushes = { green: 'green', red: 'red', blue: 'blue' } as const;
 
-export function Board({ fen, orientation, movable, onMove, lastMove, arrows, highlight, nonce }: Props) {
+export function Board({ fen, orientation, movable, onMove, lastMove, arrows, highlight, nonce, marks, onSquare }: Props) {
   const el = useRef<HTMLDivElement>(null);
   const api = useRef<Api | null>(null);
   const [promo, setPromo] = useState<{ from: string; to: string } | null>(null);
   const [reset, setReset] = useState(0); // re-applies the whole position (pieces, turn, legal moves)
   const cb = useRef(onMove);
   cb.current = onMove;
+  const sq = useRef(onSquare);
+  sq.current = onSquare;
 
   useLayoutEffect(() => {
     api.current = Chessground(el.current!, {
@@ -40,6 +44,7 @@ export function Board({ fen, orientation, movable, onMove, lastMove, arrows, hig
       highlight: { lastMove: true, check: true },
       draggable: { showGhost: true },
       premovable: { enabled: false },
+      events: { select: (key) => sq.current?.(key) },
     });
     return () => api.current?.destroy();
   }, []);
@@ -49,6 +54,7 @@ export function Board({ fen, orientation, movable, onMove, lastMove, arrows, hig
     const turn = c.turn() === 'w' ? 'white' : 'black';
     const shapes: DrawShape[] = (arrows ?? []).map((a) => ({ orig: a.from as Key, dest: a.to as Key, brush: brushes[a.color ?? 'green'] }));
     if (highlight) shapes.push({ orig: highlight as Key, brush: 'red' });
+    for (const m of marks ?? []) shapes.push({ orig: m.square as Key, brush: m.color });
     api.current!.set({
       fen,
       orientation,
@@ -69,7 +75,7 @@ export function Board({ fen, orientation, movable, onMove, lastMove, arrows, hig
       },
       drawable: { enabled: false, autoShapes: shapes },
     });
-  }, [fen, orientation, movable, lastMove?.[0], lastMove?.[1], JSON.stringify(arrows), highlight, nonce, reset]);
+  }, [fen, orientation, movable, lastMove?.[0], lastMove?.[1], JSON.stringify(arrows), highlight, nonce, reset, JSON.stringify(marks)]);
 
   const color = new Chess(fen).turn();
   return (

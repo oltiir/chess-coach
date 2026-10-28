@@ -1,12 +1,13 @@
 import { test, expect, playMove, clickSquare } from './helpers';
+import { MATE, PROMO } from './puzzle-data';
 import { readFileSync } from 'node:fs';
 
 const moves = (id: string) => readFileSync('public/data/puzzles.tsv', 'utf8').split('\n').find((l) => l.startsWith(id + '\t'))!.split('\t')[2].split(' ');
 
 test('cancelling the promotion picker leaves the board usable', async ({ page }, info) => {
   test.skip(info.project.name !== 'iphone');
-  const m = moves('6mKxk');
-  await page.goto('/#/puzzle/6mKxk');
+  const m = PROMO.moves;
+  await page.goto(`/#/puzzle/${PROMO.id}`);
   await expect(page.getByText('Find the best move.')).toBeVisible({ timeout: 20_000 });
   await clickSquare(page, m[1].slice(0, 2));
   await clickSquare(page, m[1].slice(2, 4));
@@ -31,12 +32,12 @@ test('a tap during the opponent’s reply is not counted as a wrong try', async 
 
 test('replay after a reveal starts fresh', async ({ page }, info) => {
   test.skip(info.project.name !== 'iphone');
-  await page.goto('/#/puzzle/00rTX');
+  await page.goto(`/#/puzzle/${MATE.id}`);
   await expect(page.getByText('Find the best move.')).toBeVisible({ timeout: 20_000 });
-  await playMove(page, 'h4h5');
+  await playMove(page, MATE.wrong[0]);
   await page.getByRole('button', { name: 'Show me' }).click();
   await page.getByRole('button', { name: 'Replay' }).click();
   await expect(page.getByText('Find the best move.')).toBeVisible();
-  await playMove(page, 'h4h5');
+  await playMove(page, MATE.wrong[0]);
   await expect(page.getByText('Not quite — try again')).toBeVisible();
 });

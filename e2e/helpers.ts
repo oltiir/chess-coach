@@ -33,3 +33,18 @@ export async function playMove(page: Page, uci: string) {
 
 export const noVerticalScroll = (page: Page) =>
   page.evaluate(() => document.scrollingElement!.scrollHeight <= innerHeight + 1);
+
+/** Marks placement as done (as if the 16-puzzle test was taken) so Today goes straight to the session. */
+export async function seedPlacement(page: Page, global = 1000) {
+  await page.evaluate((g) => new Promise<void>((res) => {
+    const r = indexedDB.open('chess-coach');
+    r.onsuccess = () => { const tx = r.result.transaction('kv', 'readwrite'); tx.objectStore('kv').put({ ts: 0, global: g, groups: {} }, 'placement'); tx.oncomplete = () => { r.result.close(); res(); }; };
+  }), global);
+}
+
+/** Clicks through the review's find-it-yourself step if it appears. */
+export async function skipQuiz(page: Page) {
+  await expect(page.locator('.quiz-intro, .goal-result').first()).toBeVisible({ timeout: 60_000 }); // analysis finished
+  const skip = page.getByRole('button', { name: 'Skip to answers' });
+  if (await skip.count()) await skip.click();
+}

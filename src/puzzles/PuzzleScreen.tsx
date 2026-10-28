@@ -1,79 +1,70 @@
-import { useEffect, useState } from 'preact/hooks';
+import { useEffect, useRef, useState } from 'preact/hooks';
 import { puzzlesReady } from '../boot';
-import { allAttempts, logAttempt } from '../store/attempts';
+import { coachState, logPuzzle, nextPuzzles } from '../coach/coach';
+import { GROUPS } from '../coach/groups';
+import type { Ratings } from '../coach/rating';
 import { openDb } from '../store/db';
-import { getSettings } from '../store/exportImport';
-import type { Attempt, Puzzle } from '../store/types';
-import { LADDER, themeStatus } from './ladder';
+import type { Puzzle } from '../store/types';
 import { PuzzleSet } from './PuzzleSet';
 import { PuzzleSolver, type PuzzleResult } from './PuzzleSolver';
-import { pickNewPuzzles, stepOf } from './select';
 
 export function PuzzleScreen({ puzzleId }: { puzzleId?: string }) {
-  const [attempts, setAttempts] = useState<Attempt[] | null>(null);
-  const [set, setSet] = useState<{ puzzles: Puzzle[]; step?: string } | null>(null);
+  const [state, setState] = useState<{ ratings: Ratings; weights: Record<string, number> } | null>(null);
+  const [set, setSet] = useState<{ puzzle: Puzzle; group: string }[] | null>(null);
   const [single, setSingle] = useState<Puzzle | null>(null);
-  const [summary, setSummary] = useState<PuzzleResult[] | null>(null);
+  const [summary, setSummary] = useState<{ results: PuzzleResult[]; before: number } | null>(null);
+  const before = useRef(0); // puzzle rating when the set started
 
-  const refresh = async () => { await puzzlesReady; setAttempts(await allAttempts()); };
+  const refresh = async () => { await puzzlesReady; setState(await coachState()); };
   useEffect(() => { void refresh(); }, [set, summary]);
   useEffect(() => {
     if (!puzzleId) { setSingle(null); return; }
     void puzzlesReady.then(async () => setSingle((await (await openDb()).get('puzzles', puzzleId)) ?? null));
   }, [puzzleId]);
 
-  const start = async (step?: string) => {
-    const s = await getSettings();
-    const puzzles = await pickNewPuzzles(await openDb(), 10, attempts ?? [], s.puzzleSeed, step);
+  const start = async (group?: string) => {
     setSummary(null);
-    setSet({ puzzles, step });
+    before.current = state?.ratings.global.r ?? 0;
+    setSet(await nextPuzzles(10, group));
   };
 
   if (single)
-    return (
-      <PuzzleSolver
-        puzzle={single}
-        onDone={(r) => void logAttempt({ kind: 'puzzle', itemId: single.id, ts: Date.now(), ...r, theme: stepOf(single), rating: single.rating })}
-        onNext={() => { location.hash = '#/puzzles'; }}
-        nextLabel="More puzzles"
-      />
-    );
-  if (set && set.puzzles.length)
-    return <PuzzleSet puzzles={set.puzzles} step={set.step} onFinish={(r) => { setSet(null); setSummary(r); }} />;
-  if (!attempts) return <p class="dim">Getting puzzles ready…</p>;
+    return <PuzzleSolver puzzle={single} onDone={(r) => void logPuzzle(single, r)} onNext={() => { location.hash = '#/puzzles'; }} nextLabel="More puzzles" />;
+  if (set?.length)
+    return <PuzzleSet puzzles={set} onFinish={(r) => { setSet(null); setSummary({ results: r, before: before.current }); }} />;
+  if (!state) return <p class="dim">Getting puzzles ready…</p>;
 
-  const st = themeStatus(attempts);
+  const { ratings, weights } = state;
+  const top = Object.entries(weights).sort((a, b) => b[1] - a[1])[0][0];
+  const delta = summary ? Math.round(ratings.global.r - summary.before) : 0;
   return (
     <div class="stack">
       {summary && (
         <div class="card">
           <h2>Set done</h2>
-          <p>{summary.filter((r) => r.firstTry).length} of {summary.length} first try. The ones you missed come back tomorrow.</p>
+          <p style="margin:0">{summary.results.filter((r) => r.firstTry).length} of {summary.results.length} first try · puzzle rating {delta >= 0 ? '+' : ''}{delta}. Missed ones come back tomorrow.</p>
         </div>
       )}
       <div class="card">
-        <p class="dim" style="margin:0 0 4px">Working on</p>
-        <h2>{LADDER.find((s) => s.key === st.current)!.label}</h2>
+        <p class="dim" style="margin:0 0 4px">Puzzle rating</p>
+        <h2 class="hero-title" style="margin:0 0 8px">{Math.round(ratings.global.r)}{!ratings.placed && <span class="dim" style="font-size:15px; font-weight:400"> · placement on Today</span>}</h2>
+        <p class="dim small-print">10 puzzles mixed by your weak spots, themes hidden, about 4 in 5 solvable first try.</p>
         <button class="btn block" onClick={() => void start()}>Start 10 puzzles</button>
       </div>
-      <h2 style="margin-top:24px">Your path</h2>
-      <ol class="ladder">
-        {LADDER.map((s) => {
-          const open = st.unlocked.includes(s.key);
-          const done = st.mastered.includes(s.key);
-          const acc = st.accuracy[s.key];
+      <section class="card">
+        <h2>By theme</h2>
+        <p class="dim small-print" style="margin-top:-4px">Practise one theme on purpose. “Focus” marks where your games say you lose most.</p>
+        {GROUPS.map((g) => {
+          const s = ratings.groups[g.key];
           return (
-            <li class={`ladder-step ${open ? '' : 'locked'} ${done ? 'done' : ''} ${s.key === st.current && !done ? 'current' : ''}`} key={s.key}>
-              <span class="ladder-mark" aria-hidden="true">{done ? '✓' : ''}</span>
-              <span class="ladder-label">
-                {s.label}
-                <small class="dim">{done ? 'Mastered' : open ? (acc !== undefined ? `${Math.round(acc * 100)}% first try` : 'Not started') : 'Locked'}</small>
-              </span>
-              {open && !(s.key === st.current && !done) && <button class="btn secondary small" onClick={() => void start(s.key)}>Practise</button>}
-            </li>
+            <div class="group-row" key={g.key}>
+              <span class="name">{g.label}<small>{g.key === top ? 'Focus' : ''}</small></span>
+              <span class="group-rating">{Math.round(s.r)}<small>±{Math.round(s.rd * 2)}</small></span>
+              <button class="btn secondary small" onClick={() => void start(g.key)}>Practise</button>
+            </div>
           );
         })}
-      </ol>
+      </section>
     </div>
   );
 }
