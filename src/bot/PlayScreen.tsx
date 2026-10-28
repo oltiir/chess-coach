@@ -81,6 +81,7 @@ function Setup({ startFen, onStart }: { startFen?: string; onStart: (g: BotGame)
   const [clock, setClock] = useState(false);
   const [positions, setPositions] = useState<string[]>([]);
   const [mode, setMode] = useState<'fix' | 'full'>('full');
+  const [changing, setChanging] = useState(false);
   useEffect(() => {
     void (async () => {
       const s = await getSettings();
@@ -121,25 +122,30 @@ function Setup({ startFen, onStart }: { startFen?: string; onStart: (g: BotGame)
             <Segmented value={side} onChange={setSide} options={[['random', 'Random'], ['w', 'White'], ['b', 'Black']]} />
           </Field>
         )}
-        <Field label="Bot strength" hint={`Your rating ${playerElo} + 100: a stretch`}>
+        <Field label="Bot strength" hint={`Maia, a human-like bot · your ${playerElo} + 100`}>
           <div class="stepper">
             <button class="btn secondary small" aria-label="Weaker" onClick={() => setElo(Math.max(600, elo - 50))}>−</button>
             <span class="stepper-value">{elo}</span>
             <button class="btn secondary small" aria-label="Stronger" onClick={() => setElo(Math.min(2000, elo + 50))}>+</button>
           </div>
         </Field>
-        <div class="form-field">
-          <span class="field-label">Coach</span>
-          <Segmented value={stage} onChange={setStage} options={[['0', 'Stop me'], ['1', 'Flag after'], ['2', 'Off']]} />
-          <small class="dim">{STAGE_LABELS[+stage]}. Steps back on its own after 2 clean games in a row.</small>
-        </div>
-        <Field label="Clock" hint={clock ? '15 minutes + 10 seconds a move' : 'No clock'}>
+        {changing ? (
+          <div class="form-field">
+            <span class="field-label">Coach</span>
+            <Segmented value={stage} onChange={setStage} options={[['0', 'Stop me'], ['1', 'Flag after'], ['2', 'Off']]} />
+          </div>
+        ) : (
+          <div class="coach-status">
+            <span><span class="field-label">Coach:</span> <span class="dim">{STAGE_LABELS[+stage].toLowerCase()}{+stage < 2 ? ' — steps back after 2 clean games' : ''}</span></span>
+            <button class="btn ghost small" onClick={() => setChanging(true)}>Change</button>
+          </div>
+        )}
+        <Field label="15|10 clock" hint={clock ? 'On' : 'Off'}>
           <Toggle checked={clock} onChange={setClock} label="15|10 clock" />
         </Field>
-        <div class="goal"><strong>Goal:</strong> no pieces hung, at most 1 alarm. Before every move: what can they take?</div>
         <button class="btn block" disabled={mode === 'fix' && !positions.length && !startFen} onClick={start}>Start game</button>
+        <p class="dim small-print" style="margin:-4px 0 0; text-align:center">Goal: no pieces hung, at most 1 alarm.</p>
       </div>
-      <p class="dim small-print">The bot is Maia, trained on real human games, so it plays and blunders like a person of that rating.</p>
     </div>
   );
 }
@@ -363,12 +369,16 @@ function Review({ game, onNew }: { game: BotGame; onNew: () => void }) {
     const q = quiz[quizAt];
     return (
       <div>
-        <p class="quiz-intro"><strong>Before the answers:</strong> your {quiz.length === 1 ? 'costliest move' : `${quiz.length} costliest moves`}. Find a better one yourself — that’s what makes it stick.
-          <button class="btn ghost small" onClick={() => setQuizAt(quiz.length)}>Skip to answers</button></p>
+        <p class="quiz-intro"><strong>Before the answers:</strong> your {quiz.length === 1 ? 'costliest move' : `${quiz.length} costliest moves`}. Find a better one yourself — that’s what makes it stick.</p>
         <DrillSolver key={q.id} drill={q} nextLabel={quizAt + 1 < quiz.length ? 'Next moment' : 'See the full review'}
           onDone={(r) => void logAttempt({ kind: 'drill', itemId: q.id, ts: Date.now(), ...r })}
           onNext={() => setQuizAt(quizAt + 1)}
           aside={<span class="dim counter">{quizAt + 1} / {quiz.length}</span>} />
+        <button class="btn ghost small skip-link" onClick={() => {
+          // Skipping counts as a miss, so these positions come back tomorrow.
+          for (const d of quiz.slice(quizAt)) void logAttempt({ kind: 'drill', itemId: d.id, ts: Date.now(), solved: false, firstTry: false, ms: 0 });
+          setQuizAt(quiz.length);
+        }}>Skip to answers (counts as a miss)</button>
       </div>
     );
   }

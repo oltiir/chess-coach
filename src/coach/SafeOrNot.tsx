@@ -1,7 +1,10 @@
+import { Chess } from 'chess.js';
 import { useEffect, useRef, useState } from 'preact/hooks';
 import { Board } from '../chess/board';
 import { uciToSan } from '../chess/rules';
-import { findHangs } from '../chess/material';
+import { bestCapture } from '../chess/material';
+import { PIECE_NAMES } from '../chess/names';
+import type { Square } from 'chess.js';
 import { play } from '../chess/rules';
 import { kvGet, kvSet } from '../store/db';
 import type { PuzzleResult } from './coach';
@@ -47,28 +50,32 @@ export function SafeOrNot({ items, onDone, onNext, aside, nextLabel = 'Next' }: 
     }
   };
   const after = play(item.fen, item.move);
-  const hung = !item.safe && after ? findHangs(after.fen())?.square : undefined;
+  const cap = !item.safe && after ? bestCapture(after.fen()) : null;
+  const hung = cap?.square;
+  const capSan = cap && after ? (() => { try { return new Chess(after.fen()).move({ from: cap.uci.slice(0, 2), to: cap.uci.slice(2, 4), promotion: cap.uci[4] }).san; } catch { return ''; } })() : '';
+  const hungPiece = hung && after ? PIECE_NAMES[after.get(hung as Square)!.type] : '';
   const finished = answers.length === items.length && shown !== null;
   return (
     <div class="solver safe-or-not">
       <div class="solver-head"><span class={`turn-dot ${color}`} aria-hidden="true" /><span>Safe or not? {Math.min(i + 1, items.length)}/{items.length}</span>{aside && <span class="aside">{aside}</span>}</div>
       <Board fen={shown !== null && after ? after.fen() : item.fen} orientation={color} movable={false}
-        arrows={shown === null ? [{ from: item.move.slice(0, 2), to: item.move.slice(2, 4), color: 'blue' }] : undefined}
+        arrows={shown === null ? [{ from: item.move.slice(0, 2), to: item.move.slice(2, 4), color: 'blue' }] : cap ? [{ from: cap.uci.slice(0, 2), to: cap.uci.slice(2, 4), color: 'red' }] : undefined}
         lastMove={shown !== null ? [item.move.slice(0, 2), item.move.slice(2, 4)] : undefined} highlight={shown !== null ? hung : undefined} />
       <div class="solver-foot" aria-live="polite">
         {shown === null ? (
           <>
             <div class="timer" aria-hidden="true"><span style={{ width: `${(left / limit) * 100}%` }} /></div>
-            <p>Is <strong>{uciToSan(item.fen, item.move)}</strong> safe? {left === 0 && <span class="bad">Time’s up — answer anyway.</span>}</p>
+            {i === 0 && <p class="dim small-print" style="margin:0 0 6px">Fast check, slow move: the bar trains the question until it’s automatic in a real game.</p>}
+            <p>Is <strong>{uciToSan(item.fen, item.move)}</strong> safe? {left === 0 && <span class="bad">Time’s up — counts as a miss; answer to see why.</span>}</p>
             <div class="row">
               <button class="btn secondary" style="flex:1" onClick={() => void answer(false)}>Not safe</button>
-              <button class="btn" style="flex:1" onClick={() => void answer(true)}>Safe</button>
+              <button class="btn secondary" style="flex:1" onClick={() => void answer(true)}>Safe</button>
             </div>
           </>
         ) : (
           <>
             <p class={`msg ${shown ? 'good' : 'bad'}`}>{shown ? 'Right' : 'Wrong'} — it’s {item.safe ? 'safe' : 'not safe'}</p>
-            <p class="reason">{item.safe ? 'Nothing of yours can be won after it.' : `After it, the piece on ${hung} can be won (red).`}</p>
+            <p class="reason">{item.safe ? 'Nothing of yours can be won after it.' : `After ${uciToSan(item.fen, item.move)}, ${capSan} wins your ${hungPiece} (red).`}</p>
             {finished
               ? <button class="btn block" onClick={onNext}>{nextLabel} · {answers.filter(Boolean).length}/{items.length} right</button>
               : <button class="btn block" onClick={() => { setI(i + 1); setShown(null); }}>Next position</button>}

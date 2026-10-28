@@ -55,16 +55,31 @@ export function orderGroups(n: number, weights: Record<string, number>, rnd = Ma
   return out;
 }
 
+// A light in-memory index (id, rating, groups) built once per database, so picks don't re-read 60k puzzles.
+const indexes = new WeakMap<object, Promise<Map<string, { id: string; rating: number }[]>>>();
+function groupIndex(db: DB) {
+  let idx = indexes.get(db);
+  if (!idx) {
+    idx = (async () => {
+      const byGroup = new Map<string, { id: string; rating: number }[]>(GROUPS.map((g) => [g.key, []]));
+      for (const p of await db.getAll('puzzles'))
+        for (const g of GROUPS) if (g.themes.some((t) => p.themes.includes(t))) byGroup.get(g.key)!.push({ id: p.id, rating: p.rating });
+      return byGroup;
+    })();
+    indexes.set(db, idx);
+  }
+  return idx;
+}
+/** Call after the puzzle set changes (first-run load). */
+export const resetPuzzleIndex = (db: DB) => indexes.delete(db);
+
 /** An unseen puzzle from a group, rated for ~80% first-try success; the window widens if it runs dry. */
 export async function pickPuzzle(db: DB, group: string, rating: number, seen: Set<string>, rnd = Math.random): Promise<Puzzle | null> {
-  const pool = new Map<string, Puzzle>();
-  for (const t of GROUPS.find((g) => g.key === group)!.themes)
-    for (const p of await db.getAllFromIndex('puzzles', 'themes', t)) if (!seen.has(p.id)) pool.set(p.id, p);
-  const all = [...pool.values()];
+  const all = ((await groupIndex(db)).get(group) ?? []).filter((p) => !seen.has(p.id));
   const { min, max } = window(rating);
   for (let widen = 0; widen <= 1500; widen += 100) {
     const fit = all.filter((p) => p.rating >= min - widen && p.rating <= max + widen);
-    if (fit.length) return fit[Math.floor(rnd() * fit.length)];
+    if (fit.length) return (await db.get('puzzles', fit[Math.floor(rnd() * fit.length)].id)) ?? null;
   }
   return null;
 }
@@ -75,13 +90,14 @@ const WHAT: Record<string, string> = {
 };
 
 /** One line of "why today's plan", from the data. */
-export function whyLine(p: ErrorProfile, top: string): string {
+export function whyLine(p: ErrorProfile, top: string, topPuzzles = 0): string {
   const n = p.counts[top] ?? 0;
+  const what = topPuzzles ? `${topPuzzles} ${top === 'defence' ? 'defence' : (GROUPS.find((g) => g.key === top)?.label ?? top).toLowerCase()} puzzles` : 'puzzles on it';
   const head = n
-    ? `${n} of your last ${p.total} mistakes were ${WHAT[top]}, so today leans on that.`
+    ? `${n} of your last ${p.total} mistakes were ${WHAT[top]}, so today has ${what}${top === 'defence' ? ' plus a threat scan and a safe-or-not round' : ''}.`
     : `Today mixes your weakest themes.`;
   const clock = p.clockUsed !== null && p.clockUsed < 0.6
-    ? ` You use ${Math.round(p.clockUsed * 100)}% of your clock in rapid — slow down and check before you move.`
+    ? ` You use ${Math.round(p.clockUsed * 100)}% of your clock in rapid — spend the time on “what can they take?”.`
     : '';
   return head + clock;
 }

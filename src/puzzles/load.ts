@@ -1,5 +1,6 @@
 import { kvGet, kvSet, openDb } from '../store/db';
 import type { Puzzle } from '../store/types';
+import { resetPuzzleIndex } from '../coach/plan';
 
 const VERSION = 2; // 2: 60k puzzles in 8 coach groups, rated 400-2000
 const CHUNK = 400;
@@ -25,5 +26,6 @@ export async function ensurePuzzlesLoaded(): Promise<number> {
     await new Promise((r) => setTimeout(r, 0));
   }
   await kvSet('puzzles-version', VERSION);
+  resetPuzzleIndex(db);
   return lines.length;
 }

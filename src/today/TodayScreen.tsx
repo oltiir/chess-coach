@@ -15,6 +15,9 @@ import { buildSession, dayKey, daysTrainedThisWeek, finishItem, type Session } f
 
 type Mode = 'home' | 'running' | 'summary';
 
+/** Fast = first try with the first move within 10 s: the pattern is automatic. */
+const outcome = (r: { firstTry: boolean; firstMoveMs?: number }) => (!r.firstTry ? 'miss' : (r.firstMoveMs ?? 0) > 10_000 ? 'slow' : 'fast');
+
 export function TodayScreen({ drillId }: { drillId?: string }) {
   const [single, setSingle] = useState<Drill | null>(null);
   useEffect(() => {
@@ -24,7 +27,8 @@ export function TodayScreen({ drillId }: { drillId?: string }) {
   const [session, setSession] = useState<Session | null>(null);
   const [days, setDays] = useState(0);
   const [mode, setMode] = useState<Mode>('home');
-  const [results, setResults] = useState<Record<string, boolean>>({});
+  // Per item: missed, solved slowly (comes back for speed) or solved fast.
+  const [results, setResults] = useState<Record<string, 'fast' | 'slow' | 'miss'>>({});
   const [currentId, setCurrentId] = useState<string | null>(null);
   const [placed, setPlaced] = useState<boolean | null>(null);
   const [placing, setPlacing] = useState(false);
@@ -41,10 +45,10 @@ export function TodayScreen({ drillId }: { drillId?: string }) {
     setDays(daysTrainedThisWeek(attempts, Date.now()));
     // Rebuild the summary from saved answers so it survives a reload.
     const today = dayKey(Date.now());
-    const first = new Map<string, boolean>();
+    const first = new Map<string, 'fast' | 'slow' | 'miss'>();
     for (const a of [...attempts].sort((x, y) => x.ts - y.ts))
-      if (dayKey(a.ts) === today && !first.has(a.itemId)) first.set(a.itemId, a.firstTry);
-    const res: Record<string, boolean> = {};
+      if (dayKey(a.ts) === today && !first.has(a.itemId)) first.set(a.itemId, outcome(a));
+    const res: Record<string, 'fast' | 'slow' | 'miss'> = {};
     for (const id of s.doneIds) { const v = first.get(/^[ts]:/.test(id) ? id : id.slice(2)); if (v !== undefined) res[id] = v; }
     setResults(res);
   };
@@ -85,7 +89,7 @@ export function TodayScreen({ drillId }: { drillId?: string }) {
       ? { ...base, kind: 'puzzle' as const, itemId: item.puzzle.id, rating: item.puzzle.rating, groups: groupsOf(item.puzzle.themes), theme: item.group }
       : item.kind === 'drill' ? { ...base, kind: 'drill' as const, itemId: item.drill.id }
       : { ...base, kind: item.kind === 'threat' ? 'scan' as const : 'safe' as const, itemId: item.id };
-    setResults((x) => ({ ...x, [id]: r.firstTry }));
+    setResults((x) => ({ ...x, [id]: outcome(r) }));
     await finishItem(Date.now(), id, attempt);
     setSession((s) => s && { ...s, doneIds: [...s.doneIds, id] });
   };
@@ -124,13 +128,14 @@ export function TodayScreen({ drillId }: { drillId?: string }) {
 
   if (mode === 'summary' || (mode === 'home' && total > 0 && !remaining.length)) {
     const vals = Object.values(results);
-    const missed = vals.filter((v) => !v).length;
+    const missed = vals.filter((v) => v === 'miss').length;
+    const slow = vals.filter((v) => v === 'slow').length;
     return (
       <div class="stack">
         <div class="card">
           <h2>Session done</h2>
-          {vals.length > 0 && <p>{vals.length - missed} solved first try · {missed} missed</p>}
-          <p class="dim">Back tomorrow: {missed} to try again, plus new ones.</p>
+          {vals.length > 0 && <p>{vals.length - missed - slow} solved fast · {slow} solved slowly · {missed} missed</p>}
+          <p class="dim">Back soon: {missed + slow} to try again ({slow} for speed — under 10 s to the first move), plus new ones.</p>
         </div>
         <WeekCard days={days} />
         <ChessComCard />
@@ -144,7 +149,7 @@ export function TodayScreen({ drillId }: { drillId?: string }) {
         <p class="dim" style="margin:0">Today’s session</p>
         <h2 class="hero-title">{total} items · about 15 minutes</h2>
         <p class="plan-why">{session.why}</p>
-        <p class="dim small-print" style="margin-top:-6px">{drillCount ? `${drillCount} from your own games, ` : ''}a threat scan, a safe-or-not round, and puzzles at your level.</p>
+        <p class="dim small-print" style="margin-top:-6px">{drillCount ? `${drillCount} from your own games, a threat scan, a safe-or-not round and puzzles at your level.` : 'A threat scan, a safe-or-not round and puzzles at your level. No drills from your games yet — they arrive as your chess.com games are analysed.'}</p>
         <button class="btn block" onClick={begin}>
           {doneCount > 0 ? `Continue (${doneCount}/${total})` : 'Start'}
         </button>

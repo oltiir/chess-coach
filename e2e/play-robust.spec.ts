@@ -5,6 +5,7 @@ const start = '/#/play/' + encodeURIComponent('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPP
 test('resigning while Maia is thinking sticks', async ({ page }, info) => {
   test.skip(info.project.name !== 'iphone');
   await page.goto(start);
+  await page.getByRole('button', { name: 'Change' }).click();
   await page.getByRole('radio', { name: 'Off' }).click();
   await page.getByRole('button', { name: 'Start game' }).click();
   await playMove(page, 'e2e4');
@@ -17,6 +18,7 @@ test('if Maia can’t load, the player is told and can retry', async ({ page }, 
   test.skip(info.project.name !== 'iphone');
   await page.route('**/models/maia3-5m.fp16.onnx', (r) => r.abort());
   await page.goto(start);
+  await page.getByRole('button', { name: 'Change' }).click();
   await page.getByRole('radio', { name: 'Off' }).click();
   await page.getByRole('button', { name: 'Start game' }).click();
   await playMove(page, 'e2e4');

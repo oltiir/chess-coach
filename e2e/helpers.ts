@@ -45,6 +45,6 @@ export async function seedPlacement(page: Page, global = 1000) {
 /** Clicks through the review's find-it-yourself step if it appears. */
 export async function skipQuiz(page: Page) {
   await expect(page.locator('.quiz-intro, .goal-result').first()).toBeVisible({ timeout: 60_000 }); // analysis finished
-  const skip = page.getByRole('button', { name: 'Skip to answers' });
+  const skip = page.getByRole('button', { name: /^Skip to answers/ });
   if (await skip.count()) await skip.click();
 }

@@ -35,7 +35,7 @@ test.describe('coach drills', () => {
 
   test('threat scan: tap pieces, check the answer, green marks the truth', async ({ page }, info) => {
     await expect(page.getByText('Threat scan')).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByText('Tap every piece of yours they could win right now.')).toBeVisible();
+    await expect(page.getByText(/^It’s your move. If you passed/)).toBeVisible();
     await page.getByRole('button', { name: 'Nothing is loose' }).click();
     await expect(page.getByText(/Spot on|Not quite|Nothing was loose here/)).toBeVisible();
     await page.waitForTimeout(400);

@@ -19,7 +19,8 @@ export function Placement({ onFinish }: { onFinish: () => void }) {
   const [seen] = useState(new Set<string>());
   const [result, setResult] = useState<ReturnType<typeof finishPlacement> | null>(null);
   const [pending, setPending] = useState<ReturnType<typeof finishPlacement> | null>(null); // shown after the last Next
-  const n = answersA.length + Object.keys(groupSolved).length;
+  const [step, setStep] = useState(0); // advances on Next, so the result of each puzzle stays on screen until then
+  const n = step;
 
   useEffect(() => {
     if (n >= TOTAL) return;
@@ -30,7 +31,7 @@ export function Placement({ onFinish }: { onFinish: () => void }) {
       const p = await pickPuzzle(db, group, near(n < A ? theta : stageB), seen);
       if (p) { seen.add(p.id); setPuzzle({ p, group }); }
     })();
-  }, [n]);
+  }, [step]);
 
   const done = async (solved: boolean) => {
     if (!puzzle) return;
@@ -51,7 +52,7 @@ export function Placement({ onFinish }: { onFinish: () => void }) {
     return (
       <div class="card stack">
         <h2>Your level: {Math.round(result.global)}</h2>
-        <p style="margin:0">Strongest: <strong>{groupLabel(sorted[0][0])}</strong> · Weakest: <strong>{groupLabel(sorted[sorted.length - 1][0])}</strong></p>
+        <p style="margin:0">Early read (one puzzle per theme): strongest <strong>{groupLabel(sorted[0][0])}</strong>, weakest <strong>{groupLabel(sorted[sorted.length - 1][0])}</strong>. It sharpens every session.</p>
         <p class="dim" style="margin:0">From now on every puzzle is picked so you solve about 4 in 5 first try — hard enough to stretch you, never a waste of time. Your level moves after every puzzle.</p>
         <button class="btn block" onClick={onFinish}>Build today’s session</button>
       </div>
@@ -63,7 +64,7 @@ export function Placement({ onFinish }: { onFinish: () => void }) {
       <div class="progress-track" aria-hidden="true"><span style={{ width: `${(n / TOTAL) * 100}%` }} /></div>
       <PuzzleSolver key={puzzle.p.id} puzzle={puzzle.p} hideReason
         onDone={(r) => { void logPuzzle(puzzle.p, r, puzzle.group); void done(r.firstTry); }}
-        onNext={() => (pending ? setResult(pending) : setPuzzle(null))}
+        onNext={() => (pending ? setResult(pending) : (setPuzzle(null), setStep(answersA.length + Object.keys(groupSolved).length)))}
         aside={<span class="dim counter placement-progress">Placement {n + 1} / {TOTAL}</span>} />
     </div>
   );

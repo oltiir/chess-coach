@@ -78,7 +78,7 @@ test('a session survives a reload mid-way and the summary survives too', async (
     await nextButton(page).click();
   }
   const line = await page.locator('.card', { hasText: 'Session done' }).locator('p').first().innerText();
-  expect(line).toMatch(/^\d+ solved first try · \d+ missed$/);
+  expect(line).toMatch(/^\d+ solved fast · \d+ solved slowly · \d+ missed$/);
   await page.reload();
   await expect(page.locator('.card', { hasText: 'Session done' }).locator('p').first()).toHaveText(line, { timeout: 20_000 });
 });

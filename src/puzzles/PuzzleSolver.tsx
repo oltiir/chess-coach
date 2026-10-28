@@ -102,6 +102,9 @@ export function PuzzleSolver({ puzzle, onDone, onNext, nextLabel = 'Next', aside
           <>
             <p class={`msg ${status === 'solved' ? 'good' : ''}`}>
               {status === 'solved' ? (wrong.current === 0 ? 'Solved first try' : 'Solved') : 'Here’s the move'}
+              {status === 'solved' && wrong.current === 0 && firstMove.current !== undefined && (
+                <span class="speed"> · {Math.round(firstMove.current / 1000)}s to first move{firstMove.current > 10_000 ? ' — under 10 s and it retires' : ''}</span>
+              )}
             </p>
             {!hideReason && <p class="reason">{reason}</p>}
             <div class="row">

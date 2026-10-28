@@ -19,6 +19,7 @@ test('the alarm stops a hanging move, rethink restores, a safe move goes through
 
 test('test mode plays the move without stopping, and resign shows a review', async ({ page }) => {
   await page.goto(url(HANG));
+  await page.getByRole('button', { name: 'Change' }).click();
   await page.getByRole('radio', { name: 'Off' }).click();
   await page.getByRole('button', { name: 'Start game' }).click();
   await playMove(page, 'f3g5');

@@ -17,6 +17,7 @@ test('after checkmate the final position stays on screen with the result', async
 
 test('the review shows each key moment on the board', async ({ page }) => {
   await page.goto('/#/play/' + encodeURIComponent('rnbqkbnr/ppp2ppp/3p4/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 0 3'));
+  await page.getByRole('button', { name: 'Change' }).click();
   await page.getByRole('radio', { name: 'Off' }).click();
   await page.getByRole('button', { name: 'Start game' }).click();
   await playMove(page, 'f3g5');

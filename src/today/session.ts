@@ -86,9 +86,14 @@ export async function buildSession(now: number, attempts: Attempt[], drills: Dri
   // Threat scan (loose pieces in 60% of them) and a 5-answer safe-or-not block.
   const positions = await practicePositions(db, rnd);
   const wantLoose = rnd() < 0.6;
-  const scan = positions.map(makeThreatScan).find((t) => (t.answer.length > 0) === wantLoose) ?? positions.slice(0, 1).map(makeThreatScan)[0];
+  let scan: ReturnType<typeof makeThreatScan> | undefined;
+  for (const f of positions.slice(0, 60)) { // stop at the first fitting position: each check costs a few ms
+    const t = makeThreatScan(f);
+    scan ??= t;
+    if ((t.answer.length > 0) === wantLoose) { scan = t; break; }
+  }
   const safes: SafeItem[] = [];
-  for (const f of positions) {
+  for (const f of positions.slice(0, 60)) {
     if (safes.length >= 5) break;
     const item = makeSafeOrNot(f, safes.length % 2 === 0 ? rnd() < 0.5 : !safes[safes.length - 1].safe, rnd);
     if (item) safes.push(item);
@@ -119,7 +124,7 @@ export async function buildSession(now: number, attempts: Attempt[], drills: Dri
   const items = slots.map((s) => s ?? queue.shift()).filter((x): x is SessionItem => !!x).concat(queue).slice(0, SIZE);
 
   const top = Object.entries(profile.counts).sort((a, b) => b[1] - a[1])[0]?.[0] ?? 'defence';
-  const why = whyLine(profile, top);
+  const why = whyLine(profile, top, newItems.filter((x) => x.kind === 'puzzle' && x.group === top).length);
   const data: Record<string, unknown> = {};
   for (const it of items) {
     if (it.kind === 'puzzle') data[it.id] = { group: it.group, review: it.review };

@@ -3,6 +3,7 @@ import { test, expect, playMove, seedPlacement, skipQuiz } from './helpers';
 test('the review steps through every move of the game', async ({ page }, info) => {
   test.skip(info.project.name !== 'iphone');
   await page.goto('/#/play/' + encodeURIComponent('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1'));
+  await page.getByRole('button', { name: 'Change' }).click();
   await page.getByRole('radio', { name: 'Off' }).click();
   await page.getByRole('button', { name: 'Start game' }).click();
   await playMove(page, 'e2e4');

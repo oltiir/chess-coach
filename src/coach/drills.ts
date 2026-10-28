@@ -5,18 +5,23 @@ import { moveToUci, play } from '../chess/rules';
 
 /** My pieces (side to move, worth ≥ 3) that the opponent could win if it were their move. */
 export function looseSquares(fen: string): string[] {
+  return looseCaptures(fen).map((c) => c.square);
+}
+
+/** For each of my loose pieces, the capture that wins it (the opponent's move, as UCI). */
+export function looseCaptures(fen: string): { square: string; uci: string }[] {
   const parts = fen.split(' ');
   parts[1] = parts[1] === 'w' ? 'b' : 'w';
   parts[3] = '-';
   let them: Chess;
   try { them = new Chess(parts.join(' ')); } catch { return []; }
   const theirFen = them.fen();
-  const loose = new Set<string>();
+  const loose = new Map<string, string>();
   for (const m of them.moves({ verbose: true })) {
-    if (!m.captured || m.captured === 'k' || pieceValue(m.captured) < 3 || m.isEnPassant()) continue;
-    if (staticExchange(theirFen, moveToUci(m)) >= 3) loose.add(m.to);
+    if (!m.captured || m.captured === 'k' || pieceValue(m.captured) < 3 || m.isEnPassant() || loose.has(m.to)) continue;
+    if (staticExchange(theirFen, moveToUci(m)) >= 3) loose.set(m.to, moveToUci(m));
   }
-  return [...loose];
+  return [...loose].map(([square, uci]) => ({ square, uci }));
 }
 
 export const makeThreatScan = (fen: string) => ({ fen, answer: looseSquares(fen) });
